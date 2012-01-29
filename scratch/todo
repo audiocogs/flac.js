@@ -19,7 +19,7 @@ TODO
 	decode_subframe_fixed - mostly done
 	decode_subframe_lpc - mostly done
 	decode_subframe - mostly done
-	decode_frame
+	decode_frame - mostly done
 	
 	flac_decode_frame
 	

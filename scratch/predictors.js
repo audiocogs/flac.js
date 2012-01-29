@@ -258,3 +258,100 @@ function decode_subframe(channel) {
 
     return 0
 }
+
+function decode_frame() {
+    var stream = this.stream
+	
+	var frameHeader = ff_flac_decode_frame_header(this.avctx, stream, 0)
+	
+	var fi = frameHeader.fi
+	
+    if (frameHeader.status != 0) {
+		debugger, "invalid frame header"
+		
+        return -1
+    }
+
+    if (this.channels && fi.channels != this.channels) {
+		debugger, "Switching channel layout mid-stream is not supported"
+		
+        return -1;
+    }
+    
+	this.channels = this.avctx.channels = fi.channels;
+    this.ch_mode = fi.ch_mode;
+
+    if (!this.bps && !fi.bps) {
+		debugger, "BPS not found in STREAMINFO or frame header"
+		
+        return -1;
+    }
+	
+    if (!fi.bps) {
+        fi.bps = s.bps
+    } else if (s->bps && fi.bps != s->bps) {
+		debugger, "Switching bps mid-stream is not supported"
+		
+        return -1;
+    }
+	
+    this.bps = this.avctx.bits_per_raw_sample = fi.bps;
+
+    if (this.bps > 16) {
+        this.avctx.sample_fmt = AV_SAMPLE_FMT_S32
+        this.sample_shift = 32 - this.bps
+        this.is32 = 1
+    } else {
+        this.avctx.sample_fmt = AV_SAMPLE_FMT_S16
+        this.sample_shift = 16 - s.bps
+        this.is32 = 0
+    }
+
+    if (!this.max_blocksize) {
+        this.max_blocksize = FLAC_MAX_BLOCKSIZE
+	}
+	
+    if (fi.blocksize > this.max_blocksize) {
+		debugger, "Blocksize " + fi.blocksize + " > " + this.max_blocksize
+		
+        return -1
+    }
+	
+    this.blocksize = fi.blocksize;
+
+    if (!this.samplerate && !fi.samplerate) {
+		debugger, "Sample rate not found in STREAMINFO or frame header"
+		
+        return -1;
+    }
+	
+    if (fi.samplerate == 0) {
+        fi.samplerate = this.samplerate;
+    } else if (this.samplerate && fi.samplerate != this.samplerate) {
+		debugger, "Sample rate changed from " + this.samplerate " to " + fi.samplerate
+    }
+	
+    this.samplerate = this.avctx.sample_rate = fi.samplerate
+
+    if (!this.got_streaminfo) {
+        this.allocate_buffers()
+		
+        this.got_streaminfo = 1;
+        
+		dump_headers(this.avctx, this)
+    }
+	
+    /* subframes */
+    for (var i = 0; i < this.channels; i++) {
+        if (this.decode_subframe(i) < 0) {
+            return -1
+		}
+    }
+
+    stream.align_get_bits()
+
+    /* frame footer */
+    stream.skip_bits(16) /* data crc */
+
+    return 0
+}
