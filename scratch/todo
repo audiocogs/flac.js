@@ -18,7 +18,7 @@ TODO
 	decode_residuals - mostly done
 	decode_subframe_fixed - mostly done
 	decode_subframe_lpc - mostly done
-	decode_subframe
+	decode_subframe - mostly done
 	decode_frame
 	
 	flac_decode_frame
