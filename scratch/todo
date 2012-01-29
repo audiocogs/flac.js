@@ -15,7 +15,7 @@ TODO
 	
 	get_metadata_size - mostly done
 	
-	decode_residuals
+	decode_residuals - mostly done
 	decode_subframe_fixed - mostly done
 	decode_subframe_lpc - mostly done
 	decode_subframe
@@ -24,3 +24,8 @@ TODO
 	flac_decode_frame
 	
 	flac_decode_close
+	
+	
+	
+Other file
+	get_sr_golomb_flac
