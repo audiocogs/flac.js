@@ -1,0 +1,26 @@
+TODO
+	Context
+	
+	allocate buffers
+	
+	avpriv_flac_is_extradata_valid
+	
+	flac_decode_init
+	(dump_headers)
+	
+	avpriv_flac_parse_streaminfo
+	avpriv_flac_parse_block_header - mostly done
+	
+	parse_streaminfo
+	
+	get_metadata_size - mostly done
+	
+	decode_residuals
+	decode_subframe_fixed - mostly done
+	decode_subframe_lpc - mostly done
+	decode_subframe
+	decode_frame
+	
+	flac_decode_frame
+	
+	flac_decode_close
