@@ -1,3 +1,44 @@
+function decode_residuals(channel, predictor_order) {
+    var sample = 0
+
+    var method_type = this.stream.get_bits(2) // TODO: Read bits
+	
+    if (method_type > 1) {
+		debugger, "Illegal residual coding method (" + method_type + ")"
+		
+        return -1
+    }
+
+    var rice_order = this.stream.get_bits(4)
+
+    var samples = (this.blocksize >> rice_order)
+	
+    if (pred_order > samples) {
+		debugger, "Invalid predictor order (" + predictor_order + " > " + samples + ")"
+		
+        return -1
+    }
+
+    var sample = predictor_order, i = predictor_order
+	
+    for (var partition = 0; partition < (1 << rice_order); partition++) {
+        var tmp = this.stream.get_bits(method_type == 0 ? 4 : 5)
+		
+        if (tmp == (method_type == 0 ? 15 : 31)) {
+            tmp = this.stream.get_bits(5)
+            for (; i < samples; i++, sample++)
+                this.decoded[channel][sample] = this.stream.get_sbits_long(tmp)
+        } else {
+            for (; i < samples; i++, sample++) {
+                this.decoded[channel][sample] = this.get_sr_golomb_flac(tmp, INT_MAX, 0)
+            }
+        }
+        i = 0
+    }
+
+    return 0
+}
+
 function decode_subframe_fixed(channel, predictor_order) {
 	var decoded = this.decoded[channel]
 	
@@ -145,4 +186,75 @@ function decode_subframe_lpc(channel, predictor_order) {
 	}
 	
 	return 0
+}
+
+function decode_subframe(channel) {
+	var wasted = 0
+
+    this.curr_bps = this.bps
+	
+    if (channel == 0) {
+        if (this.ch_mode == FLAC_CHMODE_RIGHT_SIDE) {
+            this.curr_bps++
+		}
+    } else {
+        if (this.ch_mode == FLAC_CHMODE_LEFT_SIDE || this.ch_mode == FLAC_CHMODE_MID_SIDE) {
+        	this.curr_bps++
+        }
+    }
+
+    if (this.stream.get_bits1()) {
+        debugger, "invalid subframe padding"
+		
+        return -1;
+    }
+	
+    var type = this.stream.get_bits(6);
+
+    if (this.stream.get_bits1()) {
+        wasted = 1
+		
+        while (!this.stream.get_bits1()) {
+            wasted++
+		}
+		
+        this.curr_bps -= wasted
+    }
+	
+    if (this.curr_bps > 32) {
+		debugger, "decorrelated bit depth > 32 (" + this.curr_bps ")"
+		
+        return -1;
+    }
+	
+    if (type == 0) {
+        var tmp = this.stream.get_sbits_long(this.curr_bps)
+		
+        for (var i = 0; i < this.blocksize; i++) {
+            this.decoded[channel][i] = tmp
+		}
+    } else if (type == 1) {
+        for (i = 0; i < s->blocksize; i++) {
+            this.decoded[channel][i] = this.stream.get_sbits_long(this.curr_bps)
+		}
+    } else if ((type >= 8) && (type <= 12)) {
+        if (decode_subframe_fixed(channel, type & ~0x8) < 0) {
+            return -1
+		}
+    } else if (type >= 32) {
+        if (decode_subframe_lpc(channel, (type & ~0x20) + 1) < 0) {
+            return -1
+		}
+    } else {
+		debugger, "Invalid coding type"
+		
+        return -1
+    }
+
+    if (wasted) {
+        for (var i = 0; i < this.blocksize; i++)
+            this.decoded[channel][i] = (this.decoded[channel][i] << wasted)
+    }
+
+    return 0
 }
