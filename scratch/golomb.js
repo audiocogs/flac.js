@@ -1,6 +1,5 @@
 var MIN_CACHE_BITS = 25
 
-
 /* Should be in the damned standard library... */
 function clz(input) {
 	var output = 0
@@ -68,8 +67,9 @@ function clz(input) {
 	return undefined // output + 4
 }
 
+/* Another function that should be in the standard library... */
 function log2(value) {
-	
+	return 31 - clz(input | 1)
 }
 
 function get_ur_golomb_jpegls(data, k, limit, esc_len) {
