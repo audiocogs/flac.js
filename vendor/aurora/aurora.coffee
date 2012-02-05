@@ -28,7 +28,8 @@
 #import "demuxers/aiff.coffee"
 #import "demuxers/wave.coffee"
 #import "demuxers/au.coffee"
+#import "../../src/demuxer.js"
 
-#import "decoders/alac.coffee"
 #import "decoders/lpcm.coffee"
 #import "decoders/xlaw.coffee"
+#import "../../src/decoder.js"
