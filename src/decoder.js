@@ -419,8 +419,7 @@ FLACDecoder = Decoder.extend(function() {
 
     // Another function that should be in the standard library...
     function log2(value) {
-    	//return 31 - clz(value | 1)
-    	return Math.log(value) / Math.LN2
+    	return 31 - clz(value | 1)
     }
     
     const MIN_CACHE_BITS = 25,
@@ -433,8 +432,8 @@ FLACDecoder = Decoder.extend(function() {
         var log = log2(buf) // First non-zero bit?
 
     	if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
-    		buf = buf >> (log - k)
-    		buf = buf + (30 - log) << k
+    		buf >>= log - k
+    		buf += (30 - log) << k
 
     		data.advance(32 + k - log)
     		return buf
