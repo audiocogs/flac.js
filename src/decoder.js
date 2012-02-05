@@ -242,7 +242,7 @@ FLACDecoder = Decoder.extend(function() {
 		var a = 0, b = 0, c = 0, d = 0
 	
 		for (var i = 0; i < predictor_order; i++) {
-			decoded[i] = this.stream.get_sbits_long(this.currentBPS) // TODO: Read signed bits (long)?
+			decoded[i] = this.stream.read(this.currentBPS) // TODO: Read signed bits (long)?
 		}
 	
 		if (this.decode_residuals(channel, predictor_order) < 0) {
