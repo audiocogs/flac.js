@@ -244,8 +244,9 @@ FLACDecoder = Decoder.extend(function() {
     }
     
     this.prototype.decode_subframe_fixed = function(channel, predictor_order) {
-        var stream = this.bitstream
-        var decoded = this.decoded[channel]
+        var stream = this.bitstream,
+            decoded = this.decoded[channel]
+            
         var a = 0, b = 0, c = 0, d = 0
         
         // warm up samples
@@ -261,14 +262,74 @@ FLACDecoder = Decoder.extend(function() {
     }
     
     this.prototype.decode_subframe_lpc = function(channel, predictor_order) {
-        throw 'decode lpc'
+        var stream = this.bitstream,
+            decoded = this.decoded[channel]
+            
+        // warm up samples
+        for (var i = 0; i < predictor_order; i++) {
+    		decoded[i] = stream.read(this.curr_bps) // TODO: Read signed bits (long)?
+    	}
+
+    	var coeff_prec = stream.read(4) + 1
+    	if (coeff_prec === 16) {
+    		this.emit('error', "Invalid coefficient precision")
+    		return -1
+    	}
+    	
+    	var qlevel = stream.read(5) // TODO: Read signed bits
+    	if (qlevel < 0) {
+    		this.emit('error', "Negative qlevel, maybe buggy stream")
+    		return -1
+    	}
+    	
+    	var coeffs = new Int32Array(32)
+    	for (var i = 0; i < predictor_order; i++) {
+    		coeffs[i] = stream.read(coeff_prec) // TODO: Read signed bits (long)?
+    	}
+    	
+    	if (this.decode_residuals(channel, predictor_order) < 0) {
+    		return -1
+    	}
+    	
+    	if (this.bps > 16) {
+    		this.emit('error', "no 64-bit integers in JS, could probably use doubles though")
+    		return -1
+    		
+    	} else {
+    		for (var i = predictor_order; i < this.blockSize - 1; i += 2) {
+    			var d = decoded[i - predictor_order]
+    			var s0 = 0, s1 = 0
+
+    			for (var j = predictor_order - 1; j > 0; j--) {
+    				var c = coeffs[j]
+    				s0 += c * d
+    				d = decoded[i - j]
+    				s1 += c * d
+    			}
+
+    			c = coeffs[0]
+    			s0 += c * d
+    			d = decoded[i] += (s0 >> qlevel)
+    			s1 += c * d
+    			decoded[i + 1] += (s1 >> qlevel)
+    		}
+
+    		if (i < this.blockSize) {
+                var sum = 0
+    			for (var j = 0; j < predictor_order; i++)
+                    sum += coeffs[j] * decoded[i - j - 1]
+
+                decoded[i] += (sum >> qlevel)
+    		}
+    	}
+
+    	return 0
     }
     
     const INT_MAX = 32767
     
     this.prototype.decode_residuals = function(channel, predictor_order) {
-        var sample = 0,
-            stream = this.bitstream,
+        var stream = this.bitstream,
             method_type = stream.readSmall(2)
             
         if (method_type > 1) {
@@ -306,7 +367,103 @@ FLACDecoder = Decoder.extend(function() {
     }
     
     this.prototype.golomb = function(k, limit, esc_len) {
-        throw 'golomb'
+        var v = get_ur_golomb_jpegls(this.bitstream, k, limit, esc_len)
+    	return (v >> 1) ^ -(v & 0x1)
+    }
+    
+    // Should be in the damned standard library...
+    function clz(input) {
+        var output = 0,
+            curbyte = 0;
+
+        while(true) { // emulate goto in JS using the break statement :D
+            curbyte = input >>> 24;
+            if (curbyte) break;
+            output += 8;
+
+            curbyte = input >>> 16;
+            if (curbyte & 0xff) break;
+            output += 8;
+
+            curbyte = input >> 8;
+            if (curbyte & 0xff) break;
+            output += 8;
+
+            curbyte = input;
+            if (curbyte & 0xff) break;
+            output += 8;
+
+            return output;
+        }
+
+        if (!(curbyte & 0xf0))
+            output += 4;
+        else
+            curbyte >>>= 4;
+
+        if (curbyte & 0x8)
+            return output;
+            
+        if (curbyte & 0x4)
+            return output + 1;
+            
+        if (curbyte & 0x2)
+            return output + 2;
+            
+        if (curbyte & 0x1)
+            return output + 3;
+
+        // shouldn't get here
+        return output + 4;
+    }
+
+    // Another function that should be in the standard library...
+    function log2(value) {
+    	//return 31 - clz(value | 1)
+    	return Math.log(value) / Math.LN2
+    }
+    
+    const MIN_CACHE_BITS = 25,
+          MAX_PREFIX_32 = 9
+
+    function get_ur_golomb_jpegls(data, k, limit, esc_len) {
+    	var offset = data.bitPosition
+    	var buf = data.peekBig(32 - offset) << offset
+        
+        var log = log2(buf) // First non-zero bit?
+
+    	if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
+    		buf = buf >> (log - k)
+    		buf = buf + (30 - log) << k
+
+    		data.advance(32 + k - log)
+    		return buf
+    		
+    	} else {
+    		for (var i = 0; data.peek(1) === 0; i++) {
+    			data.advance(1)
+    			buf = data.peekBig(32 - offset) << offset
+    		}
+
+    		data.advance(1)
+
+    		if (i < limit - 1) {
+    			if (k) {
+    				buf = data.read(k)
+    			} else {
+    				buf = 0
+    			}
+
+    			return buf + (i<<k)
+    			
+    		} else if (i === limit - 1) {
+    			buf = data.read(esc_len)
+    			return buf + 1
+    			
+    		} else {
+    			return -1
+    		}
+    	}
     }
     
 })
