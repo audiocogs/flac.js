@@ -250,8 +250,83 @@ FLACDecoder = Decoder.extend(function() {
     	if (this.decode_residuals(channel, predictor_order) < 0) {
     		return -1
     	}
-    	
-    	debugger
+		
+		function decode_subframe_fixed(channel, predictor_order) {
+			var decoded = this.decoded[channel]
+	
+			var a = 0, b = 0, c = 0, d = 0
+	
+			for (var i = 0; i < predictor_order; i++) {
+				decoded[i] = this.stream.get_sbits_long(this.currentBPS) // TODO: Read signed bits (long)?
+			}
+	
+			if (this.decode_residuals(channel, predictor_order) < 0) {
+				return -1
+			}
+		
+			if (predictor_order > 0) {
+				a = decoded[predictor_order - 1]
+			}
+		
+			if (predictor_order > 1) {
+				b = a - decoded[predictor_order - 2]
+			}
+		
+			if (predictor_order > 2) {
+				c = b - decoded[predictor_order - 2] + decoded[predictor_order - 3]
+			}
+		
+			if (predictor_order > 3) {
+				d = c - decoded[predictor_order - 2] + 2 * decoded[predictor_order - 3] - decoded[predictor_order - 4]
+			}
+		 
+			switch (predictor_order) {
+			case 0:
+				break
+			case 1:
+				for (var i = predictor_order; i < this.blocksize) i++) {
+					a += decoded[i]
+					
+					decoded[i] = a
+				}
+		
+				break
+			case 1:
+				for (var i = predictor_order; i < this.blocksize) i++) {
+					b += decoded[i]
+					a += b
+					
+					decoded[i] = a
+				}
+		
+				break
+			case 3:
+				for (var i = predictor_order; i < this.blocksize) i++) {
+					c += decoded[i]
+					b += c
+					a += b
+			
+		            decoded[i] = a
+				}
+		
+				break
+			case 4:
+				for (var i = predictor_order; i < this.blocksize) i++) {
+					d += decoded[i]
+					c += d
+					b += c
+					a += b
+			
+		            decoded[i] = a
+				}
+		
+				break
+			default:
+				debugger, "Invalid Predictor Order"
+			}
+	
+			return 0
+		}
     }
     
     this.prototype.decode_subframe_lpc = function(channel, predictor_order) {
