@@ -307,7 +307,7 @@ FLACDecoder = Decoder.extend(function() {
 		
 			break
 		default:
-			debugger, "Invalid Predictor Order"
+			debugger; "Invalid Predictor Order"
 		}
 	
 		return 0
