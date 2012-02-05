@@ -125,9 +125,7 @@ FLACDecoder = Decoder.extend(function() {
         stream.align()
         stream.advance(16) // skip CRC frame footer
         
-        // debugger
-        var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8), 
-            i = 0;
+        var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8);
         
         if (this.is32)
             var buf = new Int32Array(output)
@@ -144,8 +142,8 @@ FLACDecoder = Decoder.extend(function() {
                     var left = this.decoded[0][i],
                         right = this.decoded[1][i];
 
-                    buf[i++] = left << this.sampleShift
-                    buf[i++] = (left - right) << this.sampleShift
+                    buf[i] = left << this.sampleShift
+                    buf[i] = (left - right) << this.sampleShift
                 }
                 break
                 
@@ -154,8 +152,8 @@ FLACDecoder = Decoder.extend(function() {
                     var left = this.decoded[0][i],
                         right = this.decoded[1][i];
 
-                    buf[i++] = (left + right) << this.sampleShift
-                    buf[i++] = right << this.sampleShift
+                    buf[i] = (left + right) << this.sampleShift
+                    buf[i] = right << this.sampleShift
                 }
                 break
                 
@@ -163,9 +161,10 @@ FLACDecoder = Decoder.extend(function() {
                 for (var i = 0; i < this.blockSize; i++) {
                     var left = this.decoded[0][i],
                         right = this.decoded[1][i];
-
-                    buf[i++] = ((left -= right >> 1) + right) << this.sampleShift
-                    buf[i++] = left << this.sampleShift
+                    
+                    left -= right
+                    buf[i] = ((left >> 1) + right) << this.sampleShift
+                    buf[i] = left << this.sampleShift
                 }
                 break
         }
