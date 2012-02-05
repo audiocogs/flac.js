@@ -216,7 +216,7 @@ FLACDecoder = Decoder.extend(function() {
                 this.decoded[channel][i] = tmp
                 
         } else if (type === 1) {
-            for (i = 0; i < this.blockSize; i++)
+            for (var i = 0; i < this.blockSize; i++)
                 this.decoded[channel][i] = stream.read(this.curr_bps)
                 
         } else if ((type >= 8) && (type <= 12)) {
@@ -248,7 +248,7 @@ FLACDecoder = Decoder.extend(function() {
     
         // warm up samples
         for (var i = 0; i < predictor_order; i++) {
-            decoded[i] = stream.read(this.curr_bps) // TODO: Read signed bits (long)?
+            decoded[i] = stream.readSigned(this.curr_bps) // TODO: Read signed bits (long)?
         }
     
         if (this.decode_residuals(channel, predictor_order) < 0) {
@@ -319,7 +319,7 @@ FLACDecoder = Decoder.extend(function() {
             
         // warm up samples
         for (var i = 0; i < predictor_order; i++) {
-            decoded[i] = stream.read(this.curr_bps) // TODO: Read signed bits (long)?
+            decoded[i] = stream.readSigned(this.curr_bps) // TODO: Read signed bits (long)?
         }
 
         var coeff_prec = stream.read(4) + 1
@@ -328,7 +328,7 @@ FLACDecoder = Decoder.extend(function() {
             return -1
         }
         
-        var qlevel = stream.read(5) // TODO: Read signed bits
+        var qlevel = stream.readSigned(5) // TODO: Read signed bits
         if (qlevel < 0) {
             this.emit('error', "Negative qlevel, maybe buggy stream")
             return -1
@@ -336,7 +336,7 @@ FLACDecoder = Decoder.extend(function() {
         
         var coeffs = new Int32Array(32)
         for (var i = 0; i < predictor_order; i++) {
-            coeffs[i] = stream.read(coeff_prec) // TODO: Read signed bits (long)?
+            coeffs[i] = stream.readSigned(coeff_prec) // TODO: Read signed bits (long)?
         }
         
         if (this.decode_residuals(channel, predictor_order) < 0) {
@@ -405,7 +405,7 @@ FLACDecoder = Decoder.extend(function() {
             if (tmp === (method_type === 0 ? 15 : 31)) {
                 tmp = stream.readSmall(5)
                 for (; i < samples; i++)
-                    this.decoded[channel][sample++] = stream.readBig(tmp) // TODO: signed bits
+                    this.decoded[channel][sample++] = stream.readSigned(tmp) // TODO: signed bits
                     
             } else {
                 for (; i < samples; i++) {
