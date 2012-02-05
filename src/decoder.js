@@ -32,10 +32,7 @@ FLACDecoder = Decoder.extend(function() {
         
         if (!stream.available(4096 << 6) && !this.receivedFinalBuffer)
             return this.once('available', this.readChunk)
-            
-        var startOffset = stream.offset() // for debugging... remove!
-        console.log('-------------')
-        
+                    
         // frame sync code
         if ((stream.read(15) & 0x7FFF) !== 0x7FFC)
             return this.emit('error', 'Invalid sync code')
@@ -88,9 +85,7 @@ FLACDecoder = Decoder.extend(function() {
             stream.advance(2) // == 2
             frame_or_sample_num = (frame_or_sample_num << 6) | stream.read(6)
         }
-        
-        console.log('value = ', frame_or_sample_num)
-        
+                
         // block size
         if (bsCode === 0)
             return this.emit('error', 'Reserved blocksize code')
@@ -122,7 +117,6 @@ FLACDecoder = Decoder.extend(function() {
         
         // subframes
         for (var i = 0; i < channels; i++) {
-            console.log('pos = ', stream.offset() - startOffset)
             if (this.decodeSubframe(i) < 0) {
                 return this.emit('error', 'Error decoding subframe ' + i)
     		}
@@ -198,7 +192,6 @@ FLACDecoder = Decoder.extend(function() {
         }
         
         var type = stream.readSmall(6)
-        console.log(type, this.curr_bps)
         
         if (stream.readOne()) {
             wasted = 1
@@ -294,34 +287,33 @@ FLACDecoder = Decoder.extend(function() {
     	if (this.bps > 16) {
     		this.emit('error', "no 64-bit integers in JS, could probably use doubles though")
     		return -1
+		}
     		
-    	} else {
-    		for (var i = predictor_order; i < this.blockSize - 1; i += 2) {
-    			var d = decoded[i - predictor_order]
-    			var s0 = 0, s1 = 0
+		for (var i = predictor_order; i < this.blockSize - 1; i += 2) {
+			var d = decoded[i - predictor_order]
+			var s0 = 0, s1 = 0
 
-    			for (var j = predictor_order - 1; j > 0; j--) {
-    				var c = coeffs[j]
-    				s0 += c * d
-    				d = decoded[i - j]
-    				s1 += c * d
-    			}
+			for (var j = predictor_order - 1; j > 0; j--) {
+				var c = coeffs[j]
+				s0 += c * d
+				d = decoded[i - j]
+				s1 += c * d
+			}
 
-    			c = coeffs[0]
-    			s0 += c * d
-    			d = decoded[i] += (s0 >> qlevel)
-    			s1 += c * d
-    			decoded[i + 1] += (s1 >> qlevel)
-    		}
+			c = coeffs[0]
+			s0 += c * d
+			d = decoded[i] += (s0 >> qlevel)
+			s1 += c * d
+			decoded[i + 1] += (s1 >> qlevel)
+		}
 
-    		if (i < this.blockSize) {
-                var sum = 0
-    			for (var j = 0; j < predictor_order; i++)
-                    sum += coeffs[j] * decoded[i - j - 1]
+		if (i < this.blockSize) {
+            var sum = 0
+			for (var j = 0; j < predictor_order; j++)
+                sum += coeffs[j] * decoded[i - j - 1]
 
-                decoded[i] += (sum >> qlevel)
-    		}
-    	}
+            decoded[i] += (sum >> qlevel)
+		}
 
     	return 0
     }
@@ -357,12 +349,13 @@ FLACDecoder = Decoder.extend(function() {
                     this.decoded[channel][sample++] = stream.readBig(tmp) // TODO: signed bits
                     
             } else {
-                for (; i < samples; i++)
+                for (; i < samples; i++) {
                     this.decoded[channel][sample++] = this.golomb(tmp, INT_MAX, 0)
+                }
             }
             i = 0
         }
-
+        
         return 0
     }
     
@@ -430,6 +423,7 @@ FLACDecoder = Decoder.extend(function() {
     	var buf = data.peekBig(32 - offset) << offset
         
         var log = log2(buf) // First non-zero bit?
+        // throw log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit
 
     	if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
     		buf >>= log - k
