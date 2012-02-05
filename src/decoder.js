@@ -49,6 +49,7 @@ FLACDecoder = Decoder.extend(function() {
         this.chMode = chMode
         if (chMode < MAX_CHANNELS) {
             var channels = chMode + 1
+            this.chMode = CHMODE_INDEPENDENT
         } else if (chMode <= CHMODE_MID_SIDE) {
             var channels = 2
         } else {
@@ -133,9 +134,13 @@ FLACDecoder = Decoder.extend(function() {
         else
             var buf = new Int16Array(output)
             
-        switch (chMode) {
+        switch (this.chMode) {
             case CHMODE_INDEPENDENT:
-                this.emit('error', 'TODO: implement')
+                for (var k = 0; k < this.blockSize; k++) {
+                    for (var i = 0; i < channels; i++) {
+                        buf[j++] = this.decoded[i][k] << this.sampleShift
+                    }
+                }
                 break
                 
             case CHMODE_LEFT_SIDE:
@@ -163,8 +168,7 @@ FLACDecoder = Decoder.extend(function() {
                     var left = this.decoded[0][i],
                         right = this.decoded[1][i];
                     
-                    left -= right
-                    buf[j++] = ((left >> 1) + right) << this.sampleShift
+                    buf[j++] = ((left -= right >> 1) + right) << this.sampleShift
                     buf[j++] = left << this.sampleShift
                 }
                 break
