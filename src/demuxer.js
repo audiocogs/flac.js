@@ -29,7 +29,6 @@ FLACDemuxer = Demuxer.extend(function() {
             if (this.last) {
                 var buffer = stream.readSingleBuffer(this.size)
                 this.size -= buffer.length
-                this.readBlockHeaders = this.size > 0
                 return this.emit('data', buffer, this.size === 0)
             }
             

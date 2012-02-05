@@ -72,11 +72,18 @@ FLACDecoder = Decoder.extend(function() {
             var sampleShift = 16 - this.bps
         
         // sample number or frame number
-        if (isVarSize) {
-            stream.advance(64) // sample number
-        } else {
-            stream.advance(32) // frame number
+        // see http://www.hydrogenaudio.org/forums/index.php?s=ea7085ffe6d57132c36e6105c0d434c9&showtopic=88390&pid=754269&st=0&#entry754269
+        var ones = 0;
+        while (stream.readOne() === 1)
+            ones++
+        
+        var value = stream.read(7 - ones)
+        for (; ones > 1; ones--) {
+            stream.advance(2)
+            value = (value << 6) | stream.read(6)
         }
+        
+        console.log('value = ', value)
         
         // block size
         if (bsCode === 0)
@@ -109,6 +116,7 @@ FLACDecoder = Decoder.extend(function() {
         
         // subframes
         for (var i = 0; i < channels; i++) {
+            console.log('pos = ', stream.offset())
             if (this.decodeSubframe(i) < 0) {
                 return this.emit('error', 'Error decoding subframe ' + i)
     		}
@@ -139,6 +147,7 @@ FLACDecoder = Decoder.extend(function() {
         }
         
         var type = stream.readSmall(6)
+        console.log(type, this.curr_bps)
         
         if (stream.readOne()) {
             wasted = 1
@@ -181,7 +190,6 @@ FLACDecoder = Decoder.extend(function() {
         }
 
         return 0
-        
     }
     
     this.prototype.decode_subframe_fixed = function(channel, predictor_order) {
@@ -225,12 +233,13 @@ FLACDecoder = Decoder.extend(function() {
             return -1
         }
         
-        var sample = predictor_order, i = predictor_order
+        var sample = predictor_order, 
+            i = predictor_order
         
         for (var partition = 0; partition < (1 << rice_order); partition++) {
             var tmp = stream.read(method_type === 0 ? 4 : 5)
 
-            if (tmp === (method_type == 0 ? 15 : 31)) {
+            if (tmp === (method_type === 0 ? 15 : 31)) {
                 tmp = stream.readSmall(5)
                 for (; i < samples; i++)
                     this.decoded[channel][sample++] = stream.readBig(tmp) // TODO: signed bits
