@@ -96,7 +96,7 @@ FLACDecoder = Decoder.extend(function() {
             return this.emit('error', 'Reserved blocksize code')
         else if (bsCode === 6)
             this.blockSize = stream.read(8) + 1
-        else if (bsCode === 6)
+        else if (bsCode === 7)
             this.blockSize = stream.read(16) + 1
         else
             this.blockSize = BLOCK_SIZES[bsCode]
@@ -185,10 +185,10 @@ FLACDecoder = Decoder.extend(function() {
         
         this.curr_bps = this.bps
         if (channel === 0) {
-            if (this.ch_mode === CHMODE_RIGHT_SIDE)
+            if (this.chMode === CHMODE_RIGHT_SIDE)
                 this.curr_bps++
         } else {
-            if (this.ch_mode === CHMODE_LEFT_SIDE || this.ch_mode === CHMODE_MID_SIDE)
+            if (this.chMode === CHMODE_LEFT_SIDE || this.chMode === CHMODE_MID_SIDE)
             	this.curr_bps++
         }
         
@@ -261,7 +261,7 @@ FLACDecoder = Decoder.extend(function() {
     }
     
     this.prototype.decode_subframe_lpc = function(channel, predictor_order) {
-        
+        throw 'decode lpc'
     }
     
     const INT_MAX = 32767
