@@ -109,7 +109,7 @@ function decode_subframe_fixed(channel, predictor_order) {
 		}
 		
 		break
-	default
+	default:
 		debugger, "Invalid Predictor Order"
 	}
 	
