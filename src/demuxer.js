@@ -13,8 +13,7 @@ FLACDemuxer = Demuxer.extend(function() {
           CUESHEET = 5,
           PICTURE = 6,
           INVALID = 127,
-          
-          STREAMINFO_SIZE = 34;
+          STREAMINFO_SIZE = 34
     
     this.prototype.readChunk = function() {
         var stream = this.stream;
@@ -25,19 +24,21 @@ FLACDemuxer = Demuxer.extend(function() {
                 
             this.readHeader = true;
         }
-        
-        while (stream.available(1) && !last) {
-            var tmp = stream.readUInt8(),   
-                last = tmp & 0x80,
-                type = tmp & 0x7F,
-                size = stream.readUInt24();
                 
-            switch (type) {
+        while (stream.available(1)) {
+            if (!this.readBlockHeaders) {
+                var tmp = stream.readUInt8()   
+                this.last = (tmp & 0x80) === 0x80,
+                this.type = tmp & 0x7F,
+                this.size = stream.readUInt24()
+            }
+                
+            switch (this.type) {
                 case STREAMINFO:
                     if (this.foundStreamInfo)
                         return this.emit('error', 'STREAMINFO can only occur once.')
                         
-                    if (size !== STREAMINFO_SIZE)
+                    if (this.size !== STREAMINFO_SIZE)
                         return this.emit('error', 'STREAMINFO size is wrong.')
                         
                     this.foundStreamInfo = true
@@ -57,21 +58,31 @@ FLACDemuxer = Demuxer.extend(function() {
                         bitsPerChannel: bitstream.readSmall(5) + 1
                     }
                     
-                    this.emit('format', this.format);
-                    this.emit('cookie', cookie);
+                    this.emit('format', this.format)
+                    this.emit('cookie', cookie)
                     
                     var sampleCount = bitstream.readBig(36);
                     this.emit('duration', sampleCount / this.format.sampleRate * 1000 | 0)
                     
                     stream.advance(16) // skip MD5 hashes
+                    this.readBlockHeaders = false;
                     break;
                     
                 default:
                     if (!this.foundStreamInfo)
                         return this.emit('error', 'STREAMINFO must be the first block')
                     
-                    console.log(type, size, last)
-                    debugger
+                    if (this.last) {
+                        var buffer = stream.readSingleBuffer(this.size)
+                        this.size -= buffer.length
+                        this.readBlockHeaders = this.size > 0
+                        this.emit('data', buffer, this.size === 0)
+                    } else {
+                        if (stream.available(this.size)) {
+                            stream.advance(this.size)
+                            this.readBlockHeaders = false;
+                        }
+                    }
             }
         }
     }
