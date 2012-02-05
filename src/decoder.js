@@ -119,7 +119,7 @@ FLACDecoder = Decoder.extend(function() {
         for (var i = 0; i < channels; i++) {
             if (this.decodeSubframe(i) < 0) {
                 return this.emit('error', 'Error decoding subframe ' + i)
-    		}
+            }
         }
         
         stream.align()
@@ -183,7 +183,7 @@ FLACDecoder = Decoder.extend(function() {
                 this.curr_bps++
         } else {
             if (this.chMode === CHMODE_LEFT_SIDE || this.chMode === CHMODE_MID_SIDE)
-            	this.curr_bps++
+                this.curr_bps++
         }
         
         if (stream.readOne()) {
@@ -202,7 +202,7 @@ FLACDecoder = Decoder.extend(function() {
         }
         
         if (this.curr_bps > 32) {
-    		this.emit('error', "decorrelated bit depth > 32 (" + this.curr_bps + ")")
+            this.emit('error', "decorrelated bit depth > 32 (" + this.curr_bps + ")")
             return -1
         }
         
@@ -224,7 +224,7 @@ FLACDecoder = Decoder.extend(function() {
                 return -1
 
         } else {
-    		this.emit('error', "Invalid coding type")
+            this.emit('error', "Invalid coding type")
             return -1
         }
         
@@ -237,81 +237,77 @@ FLACDecoder = Decoder.extend(function() {
     }
     
     this.prototype.decode_subframe_fixed = function(channel, predictor_order) {
-		var decoded = this.decoded[channel]
-	
-		var a = 0, b = 0, c = 0, d = 0
-	
-		for (var i = 0; i < predictor_order; i++) {
-			decoded[i] = this.stream.read(this.currentBPS) // TODO: Read signed bits (long)?
-		}
-	
-		if (this.decode_residuals(channel, predictor_order) < 0) {
-			return -1
-		}
-		
-		if (predictor_order > 0) {
-			a = decoded[predictor_order - 1]
-		}
-		
-		if (predictor_order > 1) {
-			b = a - decoded[predictor_order - 2]
-		}
-		
-		if (predictor_order > 2) {
-			c = b - decoded[predictor_order - 2] + decoded[predictor_order - 3]
-		}
-		
-		if (predictor_order > 3) {
-			d = c - decoded[predictor_order - 2] + 2 * decoded[predictor_order - 3] - decoded[predictor_order - 4]
-		}
-		 
-		switch (predictor_order) {
-		case 0:
-			break
-		case 1:
-			for (var i = predictor_order; i < this.blocksize; i++) {
-				a += decoded[i]
-					
-				decoded[i] = a
-			}
-		
-			break
-		case 1:
-			for (var i = predictor_order; i < this.blocksize; i++) {
-				b += decoded[i]
-				a += b
-					
-				decoded[i] = a
-			}
-		
-			break
-		case 3:
-			for (var i = predictor_order; i < this.blocksize; i++) {
-				c += decoded[i]
-				b += c
-				a += b
-			
-	            decoded[i] = a
-			}
-		
-			break
-		case 4:
-			for (var i = predictor_order; i < this.blocksize; i++) {
-				d += decoded[i]
-				c += d
-				b += c
-				a += b
-			
-	            decoded[i] = a
-			}
-		
-			break
-		default:
-			debugger; "Invalid Predictor Order"
-		}
-	
-		return 0
-	}
+        var decoded = this.decoded[channel],
+            stream = this.bitstream
+            
+        var a = 0, b = 0, c = 0, d = 0
+    
+        // warm up samples
+        for (var i = 0; i < predictor_order; i++) {
+            decoded[i] = stream.read(this.curr_bps) // TODO: Read signed bits (long)?
+        }
+    
+        if (this.decode_residuals(channel, predictor_order) < 0) {
+            return -1
+        }
+        
+        if (predictor_order > 0) 
+            a = decoded[predictor_order - 1]
+        
+        if (predictor_order > 1)
+            b = a - decoded[predictor_order - 2]
+        
+        if (predictor_order > 2) 
+            c = b - decoded[predictor_order - 2] + decoded[predictor_order - 3]
+        
+        if (predictor_order > 3)
+            d = c - decoded[predictor_order - 2] + 2 * decoded[predictor_order - 3] - decoded[predictor_order - 4]
+         
+        switch (predictor_order) {
+            case 0:
+                break
+                
+            case 1:
+                for (var i = predictor_order; i < this.blockSize; i++) {
+                    a += decoded[i]
+                    decoded[i] = a
+                }
+                break
+                
+            case 1:
+                for (var i = predictor_order; i < this.blockSize; i++) {
+                    b += decoded[i]
+                    a += b
+                    decoded[i] = a
+                }
+                break
+                
+            case 3:
+                for (var i = predictor_order; i < this.blockSize; i++) {
+                    c += decoded[i]
+                    b += c
+                    a += b
+                    decoded[i] = a
+                }
+                break
+                
+            case 4:
+                for (var i = predictor_order; i < this.blockSize; i++) {
+                    d += decoded[i]
+                    c += d
+                    b += c
+                    a += b
+                    decoded[i] = a
+                }
+                break
+
+            default:
+                this.emit('error', "Invalid Predictor Order " + predictor_order)
+                return -1
+        }
+    
+        return 0
+    }
     
     this.prototype.decode_subframe_lpc = function(channel, predictor_order) {
         var stream = this.bitstream,
@@ -319,62 +315,62 @@ FLACDecoder = Decoder.extend(function() {
             
         // warm up samples
         for (var i = 0; i < predictor_order; i++) {
-    		decoded[i] = stream.read(this.curr_bps) // TODO: Read signed bits (long)?
-    	}
+            decoded[i] = stream.read(this.curr_bps) // TODO: Read signed bits (long)?
+        }
 
-    	var coeff_prec = stream.read(4) + 1
-    	if (coeff_prec === 16) {
-    		this.emit('error', "Invalid coefficient precision")
-    		return -1
-    	}
-    	
-    	var qlevel = stream.read(5) // TODO: Read signed bits
-    	if (qlevel < 0) {
-    		this.emit('error', "Negative qlevel, maybe buggy stream")
-    		return -1
-    	}
-    	
-    	var coeffs = new Int32Array(32)
-    	for (var i = 0; i < predictor_order; i++) {
-    		coeffs[i] = stream.read(coeff_prec) // TODO: Read signed bits (long)?
-    	}
-    	
-    	if (this.decode_residuals(channel, predictor_order) < 0) {
-    		return -1
-    	}
-    	
-    	if (this.bps > 16) {
-    		this.emit('error', "no 64-bit integers in JS, could probably use doubles though")
-    		return -1
-		}
-    		
-		for (var i = predictor_order; i < this.blockSize - 1; i += 2) {
-			var d = decoded[i - predictor_order]
-			var s0 = 0, s1 = 0
+        var coeff_prec = stream.read(4) + 1
+        if (coeff_prec === 16) {
+            this.emit('error', "Invalid coefficient precision")
+            return -1
+        }
+        
+        var qlevel = stream.read(5) // TODO: Read signed bits
+        if (qlevel < 0) {
+            this.emit('error', "Negative qlevel, maybe buggy stream")
+            return -1
+        }
+        
+        var coeffs = new Int32Array(32)
+        for (var i = 0; i < predictor_order; i++) {
+            coeffs[i] = stream.read(coeff_prec) // TODO: Read signed bits (long)?
+        }
+        
+        if (this.decode_residuals(channel, predictor_order) < 0) {
+            return -1
+        }
+        
+        if (this.bps > 16) {
+            this.emit('error', "no 64-bit integers in JS, could probably use doubles though")
+            return -1
+        }
+            
+        for (var i = predictor_order; i < this.blockSize - 1; i += 2) {
+            var d = decoded[i - predictor_order]
+            var s0 = 0, s1 = 0
 
-			for (var j = predictor_order - 1; j > 0; j--) {
-				var c = coeffs[j]
-				s0 += c * d
-				d = decoded[i - j]
-				s1 += c * d
-			}
+            for (var j = predictor_order - 1; j > 0; j--) {
+                var c = coeffs[j]
+                s0 += c * d
+                d = decoded[i - j]
+                s1 += c * d
+            }
 
-			c = coeffs[0]
-			s0 += c * d
-			d = decoded[i] += (s0 >> qlevel)
-			s1 += c * d
-			decoded[i + 1] += (s1 >> qlevel)
-		}
+            c = coeffs[0]
+            s0 += c * d
+            d = decoded[i] += (s0 >> qlevel)
+            s1 += c * d
+            decoded[i + 1] += (s1 >> qlevel)
+        }
 
-		if (i < this.blockSize) {
+        if (i < this.blockSize) {
             var sum = 0
-			for (var j = 0; j < predictor_order; j++)
+            for (var j = 0; j < predictor_order; j++)
                 sum += coeffs[j] * decoded[i - j - 1]
 
             decoded[i] += (sum >> qlevel)
-		}
+        }
 
-    	return 0
+        return 0
     }
     
     const INT_MAX = 32767
@@ -420,7 +416,7 @@ FLACDecoder = Decoder.extend(function() {
     
     this.prototype.golomb = function(k, limit, esc_len) {
         var v = get_ur_golomb_jpegls(this.bitstream, k, limit, esc_len)
-    	return (v >> 1) ^ -(v & 0x1)
+        return (v >> 1) ^ -(v & 0x1)
     }
     
     // Should be in the damned standard library...
@@ -471,51 +467,51 @@ FLACDecoder = Decoder.extend(function() {
 
     // Another function that should be in the standard library...
     function log2(value) {
-    	return 31 - clz(value | 1)
+        return 31 - clz(value | 1)
     }
     
     const MIN_CACHE_BITS = 25,
           MAX_PREFIX_32 = 9
 
     function get_ur_golomb_jpegls(data, k, limit, esc_len) {
-    	var offset = data.bitPosition
-    	var buf = data.peekBig(32 - offset) << offset
+        var offset = data.bitPosition
+        var buf = data.peekBig(32 - offset) << offset
         
         var log = log2(buf) // First non-zero bit?
         // throw log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit
 
-    	if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
-    		buf >>= log - k
-    		buf += (30 - log) << k
+        if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
+            buf >>= log - k
+            buf += (30 - log) << k
 
-    		data.advance(32 + k - log)
-    		return buf
-    		
-    	} else {
-    		for (var i = 0; data.peek(1) === 0; i++) {
-    			data.advance(1)
-    			buf = data.peekBig(32 - offset) << offset
-    		}
+            data.advance(32 + k - log)
+            return buf
+            
+        } else {
+            for (var i = 0; data.peek(1) === 0; i++) {
+                data.advance(1)
+                buf = data.peekBig(32 - offset) << offset
+            }
 
-    		data.advance(1)
+            data.advance(1)
 
-    		if (i < limit - 1) {
-    			if (k) {
-    				buf = data.read(k)
-    			} else {
-    				buf = 0
-    			}
+            if (i < limit - 1) {
+                if (k) {
+                    buf = data.read(k)
+                } else {
+                    buf = 0
+                }
 
-    			return buf + (i<<k)
-    			
-    		} else if (i === limit - 1) {
-    			buf = data.read(esc_len)
-    			return buf + 1
-    			
-    		} else {
-    			return -1
-    		}
-    	}
+                return buf + (i<<k)
+                
+            } else if (i === limit - 1) {
+                buf = data.read(esc_len)
+                return buf + 1
+                
+            } else {
+                return -1
+            }
+        }
     }
     
 })
