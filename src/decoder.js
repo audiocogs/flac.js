@@ -211,13 +211,13 @@ FLACDecoder = Decoder.extend(function() {
         }
         
         if (type === 0) {
-            var tmp = stream.read(this.curr_bps)
+            var tmp = stream.readSigned(this.curr_bps)
             for (var i = 0; i < this.blockSize; i++)
                 this.decoded[channel][i] = tmp
                 
         } else if (type === 1) {
             for (var i = 0; i < this.blockSize; i++)
-                this.decoded[channel][i] = stream.read(this.curr_bps)
+                this.decoded[channel][i] = stream.readSigned(this.curr_bps)
                 
         } else if ((type >= 8) && (type <= 12)) {
             if (this.decode_subframe_fixed(channel, type & ~0x8) < 0)
