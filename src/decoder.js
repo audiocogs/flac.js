@@ -32,6 +32,9 @@ FLACDecoder = Decoder.extend(function() {
         
         if (!stream.available(4096 << 6) && !this.receivedFinalBuffer)
             return this.once('available', this.readChunk)
+            
+        var startOffset = stream.offset() // for debugging... remove!
+        console.log('-------------')
         
         // frame sync code
         if ((stream.read(15) & 0x7FFF) !== 0x7FFC)
@@ -66,10 +69,13 @@ FLACDecoder = Decoder.extend(function() {
         if (this.bps !== this.format.bitsPerChannel)
             return this.emit('error', 'Switching bits per sample mid-stream not supported.')
             
-        if (this.bps > 16)
-            var sampleShift = 32 - this.bps
-        else
-            var sampleShift = 16 - this.bps
+        if (this.bps > 16) {
+            this.sampleShift = 32 - this.bps
+            this.is32 = true
+        } else {
+            this.sampleShift = 16 - this.bps
+            this.is32 = false
+        }
         
         // sample number or frame number
         // see http://www.hydrogenaudio.org/forums/index.php?s=ea7085ffe6d57132c36e6105c0d434c9&showtopic=88390&pid=754269&st=0&#entry754269
@@ -77,13 +83,13 @@ FLACDecoder = Decoder.extend(function() {
         while (stream.readOne() === 1)
             ones++
         
-        var value = stream.read(7 - ones)
+        var frame_or_sample_num = stream.read(7 - ones)
         for (; ones > 1; ones--) {
-            stream.advance(2)
-            value = (value << 6) | stream.read(6)
+            stream.advance(2) // == 2
+            frame_or_sample_num = (frame_or_sample_num << 6) | stream.read(6)
         }
         
-        console.log('value = ', value)
+        console.log('value = ', frame_or_sample_num)
         
         // block size
         if (bsCode === 0)
@@ -116,7 +122,7 @@ FLACDecoder = Decoder.extend(function() {
         
         // subframes
         for (var i = 0; i < channels; i++) {
-            console.log('pos = ', stream.offset())
+            console.log('pos = ', stream.offset() - startOffset)
             if (this.decodeSubframe(i) < 0) {
                 return this.emit('error', 'Error decoding subframe ' + i)
     		}
@@ -126,6 +132,51 @@ FLACDecoder = Decoder.extend(function() {
         stream.advance(16) // skip CRC frame footer
         
         // debugger
+        var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8), 
+            i = 0;
+        
+        if (this.is32)
+            var buf = new Int32Array(output)
+        else
+            var buf = new Int16Array(output)
+            
+        switch (chMode) {
+            case CHMODE_INDEPENDENT:
+                this.emit('error', 'TODO: implement')
+                break
+                
+            case CHMODE_LEFT_SIDE:
+                for (var i = 0; i < this.blockSize; i++) {
+                    var left = this.decoded[0][i],
+                        right = this.decoded[1][i];
+
+                    buf[i++] = left << this.sampleShift
+                    buf[i++] = (left - right) << this.sampleShift
+                }
+                break
+                
+            case CHMODE_RIGHT_SIDE:
+                for (var i = 0; i < this.blockSize; i++) {
+                    var left = this.decoded[0][i],
+                        right = this.decoded[1][i];
+
+                    buf[i++] = (left + right) << this.sampleShift
+                    buf[i++] = right << this.sampleShift
+                }
+                break
+                
+            case CHMODE_MID_SIDE:
+                for (var i = 0; i < this.blockSize; i++) {
+                    var left = this.decoded[0][i],
+                        right = this.decoded[1][i];
+
+                    buf[i++] = ((left -= right >> 1) + right) << this.sampleShift
+                    buf[i++] = left << this.sampleShift
+                }
+                break
+        }
+        
+        this.emit('data', buf)
     }
     
     this.prototype.decodeSubframe = function(channel) {
