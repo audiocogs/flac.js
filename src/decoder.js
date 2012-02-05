@@ -125,7 +125,8 @@ FLACDecoder = Decoder.extend(function() {
         stream.align()
         stream.advance(16) // skip CRC frame footer
         
-        var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8);
+        var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8),
+            j = 0;
         
         if (this.is32)
             var buf = new Int32Array(output)
@@ -142,8 +143,8 @@ FLACDecoder = Decoder.extend(function() {
                     var left = this.decoded[0][i],
                         right = this.decoded[1][i];
 
-                    buf[i] = left << this.sampleShift
-                    buf[i] = (left - right) << this.sampleShift
+                    buf[j++] = left << this.sampleShift
+                    buf[j++] = (left - right) << this.sampleShift
                 }
                 break
                 
@@ -152,8 +153,8 @@ FLACDecoder = Decoder.extend(function() {
                     var left = this.decoded[0][i],
                         right = this.decoded[1][i];
 
-                    buf[i] = (left + right) << this.sampleShift
-                    buf[i] = right << this.sampleShift
+                    buf[j++] = (left + right) << this.sampleShift
+                    buf[j++] = right << this.sampleShift
                 }
                 break
                 
@@ -163,8 +164,8 @@ FLACDecoder = Decoder.extend(function() {
                         right = this.decoded[1][i];
                     
                     left -= right
-                    buf[i] = ((left >> 1) + right) << this.sampleShift
-                    buf[i] = left << this.sampleShift
+                    buf[j++] = ((left >> 1) + right) << this.sampleShift
+                    buf[j++] = left << this.sampleShift
                 }
                 break
         }
