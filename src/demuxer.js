@@ -122,7 +122,7 @@ FLACDemuxer = Demuxer.extend(function() {
                     this.readBlockHeaders = false
             }
             
-            if (this.last)
+            if (this.last && this.metadata)
                 this.emit('metadata', this.metadata)
         }
         
