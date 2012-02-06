@@ -35,6 +35,9 @@ FLACDemuxer = Demuxer.extend(function() {
             
             if (!this.foundStreamInfo && this.type !== STREAMINFO)
                 return this.emit('error', 'STREAMINFO must be the first block')
+                
+            if (!stream.available(this.size))
+                return;
             
             switch (this.type) {
                 case STREAMINFO:
@@ -92,7 +95,6 @@ FLACDemuxer = Demuxer.extend(function() {
                     break;
                 
                 default:
-                    if (!stream.available(this.size)) return;
                     stream.advance(this.size)
                     this.readBlockHeaders = false;
             }
