@@ -278,7 +278,7 @@ FLACDecoder = Decoder.extend(function() {
                 }
                 break
                 
-            case 1:
+            case 2:
                 for (var i = predictor_order; i < this.blockSize; i++) {
                     b += decoded[i]
                     a += b
