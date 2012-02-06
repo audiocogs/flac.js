@@ -76,10 +76,10 @@ FLACDemuxer = Demuxer.extend(function() {
                     
                 case VORBIS_COMMENT:
                     // see http://www.xiph.org/vorbis/doc/v-comment.html
-                    var metadata = {},
-                        len = stream.readUInt32(true);
+                    this.metadata || (this.metadata = {})
+                    var len = stream.readUInt32(true)
                     
-                    metadata.vendor = stream.readString(len)
+                    this.metadata.vendor = stream.readString(len)
                     var length = stream.readUInt32(true)
                     
                     for (var i = 0; i < length; i++) {
@@ -87,17 +87,43 @@ FLACDemuxer = Demuxer.extend(function() {
                         var str = decodeURIComponent(escape(stream.readString(len))),
                             idx = str.indexOf('=')
                             
-                        metadata[str.slice(0, idx)] = str.slice(idx + 1)
+                        this.metadata[str.slice(0, idx)] = str.slice(idx + 1)
                     }
                     
                     // TODO: standardize field names accross formats
-                    this.emit('metadata', metadata)
                     break;
+                    
+                case PICTURE:
+                    var type = stream.readUInt32()
+                    if (type !== 3) { // make sure this is album art (type 3)
+                        stream.advance(this.size - 4)
+                    }
+                    else {
+                        var mimeLen = stream.readUInt32(),
+                            mime = stream.readString(mimeLen),
+                            descLen = stream.readUInt32(),
+                            description = stream.readString(descLen),
+                            width = stream.readUInt32(),
+                            height = stream.readUInt32(),
+                            depth = stream.readUInt32(),
+                            colors = stream.readUInt32(),
+                            length = stream.readUInt32(),
+                            picture = stream.readBuffer(length)
+                    
+                        this.metadata || (this.metadata = {})
+                        this.metadata['Cover Art'] = picture.data.buffer
+                    }
+                    
+                    // does anyone want the rest of the info?
+                    break
                 
                 default:
                     stream.advance(this.size)
-                    this.readBlockHeaders = false;
+                    this.readBlockHeaders = false
             }
+            
+            if (this.last)
+                this.emit('metadata', this.metadata)
         }
         
         while (stream.available(1) && this.last) {
