@@ -33,6 +33,9 @@ FLACDemuxer = Demuxer.extend(function() {
                 this.size = stream.readUInt24()
             }
             
+            if (!this.foundStreamInfo && this.type !== STREAMINFO)
+                return this.emit('error', 'STREAMINFO must be the first block')
+            
             switch (this.type) {
                 case STREAMINFO:
                     if (this.foundStreamInfo)
@@ -67,15 +70,31 @@ FLACDemuxer = Demuxer.extend(function() {
                     stream.advance(16) // skip MD5 hashes
                     this.readBlockHeaders = false;
                     break;
+                    
+                case VORBIS_COMMENT:
+                    // see http://www.xiph.org/vorbis/doc/v-comment.html
+                    var metadata = {},
+                        len = stream.readUInt32(true);
+                    
+                    metadata.vendor = stream.readString(len)
+                    var length = stream.readUInt32(true)
+                    
+                    for (var i = 0; i < length; i++) {
+                        len = stream.readUInt32(true)
+                        var str = decodeURIComponent(escape(stream.readString(len))),
+                            idx = str.indexOf('=')
+                            
+                        metadata[str.slice(0, idx)] = str.slice(idx + 1)
+                    }
+                    
+                    // TODO: standardize field names accross formats
+                    this.emit('metadata', metadata)
+                    break;
                 
                 default:
-                    if (!this.foundStreamInfo)
-                        return this.emit('error', 'STREAMINFO must be the first block')
-                    
-                    if (stream.available(this.size)) {
-                        stream.advance(this.size)
-                        this.readBlockHeaders = false;
-                    }
+                    if (!stream.available(this.size)) return;
+                    stream.advance(this.size)
+                    this.readBlockHeaders = false;
             }
         }
         
