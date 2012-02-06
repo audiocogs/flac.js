@@ -491,19 +491,14 @@ FLACDecoder = Decoder.extend(function() {
             return buf
             
         } else {
-            for (var i = 0; data.peek(1) === 0; i++) {
-                data.advance(1)
+            for (var i = 0; data.read(1) === 0; i++)
                 buf = data.peekBig(32 - offset) << offset
-            }
-
-            data.advance(1)
 
             if (i < limit - 1) {
-                if (k) {
+                if (k)
                     buf = data.read(k)
-                } else {
+                else
                     buf = 0
-                }
 
                 return buf + (i << k)
                 
