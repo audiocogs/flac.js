@@ -29,7 +29,7 @@ FLACDecoder = Decoder.extend(function() {
     this.prototype.readChunk = function() {
         var stream = this.bitstream
         
-        if (!stream.available(4096 << 6) && !this.receivedFinalBuffer)
+        if (!(stream.available(4096 << 6) || (this.receivedFinalBuffer && stream.available(48))))
             return this.once('available', this.readChunk)
                     
         // frame sync code
