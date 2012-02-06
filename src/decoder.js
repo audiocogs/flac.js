@@ -3,7 +3,6 @@ FLACDecoder = Decoder.extend(function() {
     
     this.prototype.setCookie = function(cookie) {
         this.cookie = cookie
-        console.log(cookie)
     }
     
     const BLOCK_SIZES = new Int16Array([
@@ -41,7 +40,7 @@ FLACDecoder = Decoder.extend(function() {
             bsCode = stream.readSmall(4), // block size
             srCode = stream.readSmall(4), // sample rate code
             chMode = stream.readSmall(4), // channel mode
-            bpsCode = stream.readSmall(3); // bits per sample
+            bpsCode = stream.readSmall(3) // bits per sample
             
         stream.advance(1) // reserved bit
         
@@ -168,7 +167,8 @@ FLACDecoder = Decoder.extend(function() {
                     var left = this.decoded[0][i],
                         right = this.decoded[1][i];
                     
-                    buf[j++] = ((left -= right >> 1) + right) << this.sampleShift
+                    left -= right >> 1
+                    buf[j++] = (left + right) << this.sampleShift
                     buf[j++] = left << this.sampleShift
                 }
                 break
@@ -248,7 +248,7 @@ FLACDecoder = Decoder.extend(function() {
     
         // warm up samples
         for (var i = 0; i < predictor_order; i++) {
-            decoded[i] = stream.readSigned(this.curr_bps) // TODO: Read signed bits (long)?
+            decoded[i] = stream.readSigned(this.curr_bps)
         }
     
         if (this.decode_residuals(channel, predictor_order) < 0) {
@@ -319,16 +319,16 @@ FLACDecoder = Decoder.extend(function() {
             
         // warm up samples
         for (var i = 0; i < predictor_order; i++) {
-            decoded[i] = stream.readSigned(this.curr_bps) // TODO: Read signed bits (long)?
+            decoded[i] = stream.readSigned(this.curr_bps)
         }
 
-        var coeff_prec = stream.read(4) + 1
+        var coeff_prec = stream.readSmall(4) + 1
         if (coeff_prec === 16) {
             this.emit('error', "Invalid coefficient precision")
             return -1
         }
         
-        var qlevel = stream.readSigned(5) // TODO: Read signed bits
+        var qlevel = stream.readSigned(5)
         if (qlevel < 0) {
             this.emit('error', "Negative qlevel, maybe buggy stream")
             return -1
@@ -336,7 +336,7 @@ FLACDecoder = Decoder.extend(function() {
         
         var coeffs = new Int32Array(32)
         for (var i = 0; i < predictor_order; i++) {
-            coeffs[i] = stream.readSigned(coeff_prec) // TODO: Read signed bits (long)?
+            coeffs[i] = stream.readSigned(coeff_prec)
         }
         
         if (this.decode_residuals(channel, predictor_order) < 0) {
@@ -400,12 +400,13 @@ FLACDecoder = Decoder.extend(function() {
             i = predictor_order
         
         for (var partition = 0; partition < (1 << rice_order); partition++) {
-            var tmp = stream.read(method_type === 0 ? 4 : 5)
+            var tmp = stream.readSmall(method_type === 0 ? 4 : 5)
 
             if (tmp === (method_type === 0 ? 15 : 31)) {
                 tmp = stream.readSmall(5)
-                for (; i < samples; i++)
-                    this.decoded[channel][sample++] = stream.readSigned(tmp) // TODO: signed bits
+                for (; i < samples; i++) {
+                    this.decoded[channel][sample++] = stream.readSigned(tmp)
+                }
                     
             } else {
                 for (; i < samples; i++) {
@@ -420,7 +421,7 @@ FLACDecoder = Decoder.extend(function() {
     
     this.prototype.golomb = function(k, limit, esc_len) {
         var v = get_ur_golomb_jpegls(this.bitstream, k, limit, esc_len)
-        return (v >> 1) ^ -(v & 0x1)
+        return (v >> 1) ^ -(v & 1)
     }
     
     // Should be in the damned standard library...
@@ -437,7 +438,7 @@ FLACDecoder = Decoder.extend(function() {
             if (curbyte & 0xff) break;
             output += 8;
 
-            curbyte = input >> 8;
+            curbyte = input >>> 8;
             if (curbyte & 0xff) break;
             output += 8;
 
@@ -474,18 +475,16 @@ FLACDecoder = Decoder.extend(function() {
         return 31 - clz(value | 1)
     }
     
-    const MIN_CACHE_BITS = 25,
-          MAX_PREFIX_32 = 9
+    const MIN_CACHE_BITS = 25
 
     function get_ur_golomb_jpegls(data, k, limit, esc_len) {
         var offset = data.bitPosition
         var buf = data.peekBig(32 - offset) << offset
         
-        var log = log2(buf) // First non-zero bit?
-        // throw log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit
+        var log = log2(buf)
 
         if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
-            buf >>= log - k
+            buf >>>= log - k
             buf += (30 - log) << k
 
             data.advance(32 + k - log)
@@ -506,7 +505,7 @@ FLACDecoder = Decoder.extend(function() {
                     buf = 0
                 }
 
-                return buf + (i<<k)
+                return buf + (i << k)
                 
             } else if (i === limit - 1) {
                 buf = data.read(esc_len)
