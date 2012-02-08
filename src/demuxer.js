@@ -84,7 +84,7 @@ FLACDemuxer = Demuxer.extend(function() {
                     
                     for (var i = 0; i < length; i++) {
                         len = stream.readUInt32(true)
-                        var str = decodeURIComponent(escape(stream.readString(len))),
+                        var str = stream.readUTF8(len),
                             idx = str.indexOf('=')
                             
                         this.metadata[str.slice(0, idx)] = str.slice(idx + 1)
