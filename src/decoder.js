@@ -99,11 +99,11 @@ FLACDecoder = Decoder.extend(function() {
         // sample rate
         if (srCode < 12)
             var sampleRate = SAMPLE_RATES[srCode]
-        else if (srCode == 12)
+        else if (srCode === 12)
             var sampleRate = stream.read(8) * 1000
-        else if (srCode == 13)
+        else if (srCode === 13)
             var sampleRate = stream.read(16)
-        else if (srCode == 14)
+        else if (srCode === 14)
             var sampleRate = stream.read(16) * 10
         else
             return this.emit('error', 'Invalid sample rate code')
