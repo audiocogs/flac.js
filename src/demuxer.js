@@ -16,13 +16,13 @@ FLACDemuxer = Demuxer.extend(function() {
           STREAMINFO_SIZE = 34
     
     this.prototype.readChunk = function() {
-        var stream = this.stream;
+        var stream = this.stream
         
         if (!this.readHeader && stream.available(4)) {
             if (stream.readString(4) !== 'fLaC')
                 return this.emit('error', 'Invalid FLAC file.')
                 
-            this.readHeader = true;
+            this.readHeader = true
         }
         
         while (stream.available(1) && !this.last) {                     
@@ -37,7 +37,7 @@ FLACDemuxer = Demuxer.extend(function() {
                 return this.emit('error', 'STREAMINFO must be the first block')
                 
             if (!stream.available(this.size))
-                return;
+                return
             
             switch (this.type) {
                 case STREAMINFO:
@@ -67,12 +67,12 @@ FLACDemuxer = Demuxer.extend(function() {
                     this.emit('format', this.format)
                     this.emit('cookie', cookie)
                 
-                    var sampleCount = bitstream.readBig(36);
+                    var sampleCount = bitstream.readBig(36)
                     this.emit('duration', sampleCount / this.format.sampleRate * 1000 | 0)
                 
                     stream.advance(16) // skip MD5 hashes
-                    this.readBlockHeaders = false;
-                    break;
+                    this.readBlockHeaders = false
+                    break
                     
                 case VORBIS_COMMENT:
                     // see http://www.xiph.org/vorbis/doc/v-comment.html
@@ -90,15 +90,14 @@ FLACDemuxer = Demuxer.extend(function() {
                         this.metadata[str.slice(0, idx)] = str.slice(idx + 1)
                     }
                     
-                    // TODO: standardize field names accross formats
-                    break;
+                    // TODO: standardize field names across formats
+                    break
                     
                 case PICTURE:
                     var type = stream.readUInt32()
                     if (type !== 3) { // make sure this is album art (type 3)
                         stream.advance(this.size - 4)
-                    }
-                    else {
+                    } else {
                         var mimeLen = stream.readUInt32(),
                             mime = stream.readString(mimeLen),
                             descLen = stream.readUInt32(),

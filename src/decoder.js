@@ -76,7 +76,7 @@ FLACDecoder = Decoder.extend(function() {
         
         // sample number or frame number
         // see http://www.hydrogenaudio.org/forums/index.php?s=ea7085ffe6d57132c36e6105c0d434c9&showtopic=88390&pid=754269&st=0&#entry754269
-        var ones = 0;
+        var ones = 0
         while (stream.readOne() === 1)
             ones++
         
@@ -126,7 +126,7 @@ FLACDecoder = Decoder.extend(function() {
         stream.advance(16) // skip CRC frame footer
         
         var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8),
-            j = 0;
+            j = 0
         
         if (this.is32)
             var buf = new Int32Array(output)
@@ -145,7 +145,7 @@ FLACDecoder = Decoder.extend(function() {
             case CHMODE_LEFT_SIDE:
                 for (var i = 0; i < this.blockSize; i++) {
                     var left = this.decoded[0][i],
-                        right = this.decoded[1][i];
+                        right = this.decoded[1][i]
 
                     buf[j++] = left << this.sampleShift
                     buf[j++] = (left - right) << this.sampleShift
@@ -155,7 +155,7 @@ FLACDecoder = Decoder.extend(function() {
             case CHMODE_RIGHT_SIDE:
                 for (var i = 0; i < this.blockSize; i++) {
                     var left = this.decoded[0][i],
-                        right = this.decoded[1][i];
+                        right = this.decoded[1][i]
 
                     buf[j++] = (left + right) << this.sampleShift
                     buf[j++] = right << this.sampleShift
@@ -165,7 +165,7 @@ FLACDecoder = Decoder.extend(function() {
             case CHMODE_MID_SIDE:
                 for (var i = 0; i < this.blockSize; i++) {
                     var left = this.decoded[0][i],
-                        right = this.decoded[1][i];
+                        right = this.decoded[1][i]
                     
                     left -= right >> 1
                     buf[j++] = (left + right) << this.sampleShift
@@ -413,6 +413,7 @@ FLACDecoder = Decoder.extend(function() {
                     this.decoded[channel][sample++] = this.golomb(tmp, INT_MAX, 0)
                 }
             }
+            
             i = 0
         }
         
@@ -427,47 +428,47 @@ FLACDecoder = Decoder.extend(function() {
     // Should be in the damned standard library...
     function clz(input) {
         var output = 0,
-            curbyte = 0;
+            curbyte = 0
 
         while(true) { // emulate goto in JS using the break statement :D
-            curbyte = input >>> 24;
-            if (curbyte) break;
-            output += 8;
+            curbyte = input >>> 24
+            if (curbyte) break
+            output += 8
 
-            curbyte = input >>> 16;
-            if (curbyte & 0xff) break;
-            output += 8;
+            curbyte = input >>> 16
+            if (curbyte & 0xff) break
+            output += 8
 
-            curbyte = input >>> 8;
-            if (curbyte & 0xff) break;
-            output += 8;
+            curbyte = input >>> 8
+            if (curbyte & 0xff) break
+            output += 8
 
-            curbyte = input;
-            if (curbyte & 0xff) break;
-            output += 8;
+            curbyte = input
+            if (curbyte & 0xff) break
+            output += 8
 
-            return output;
+            return output
         }
 
         if (!(curbyte & 0xf0))
-            output += 4;
+            output += 4
         else
-            curbyte >>>= 4;
+            curbyte >>>= 4
 
         if (curbyte & 0x8)
-            return output;
+            return output
             
         if (curbyte & 0x4)
-            return output + 1;
+            return output + 1
             
         if (curbyte & 0x2)
-            return output + 2;
+            return output + 2
             
         if (curbyte & 0x1)
-            return output + 3;
+            return output + 3
 
         // shouldn't get here
-        return output + 4;
+        return output + 4
     }
 
     // Another function that should be in the standard library...
