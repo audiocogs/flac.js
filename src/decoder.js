@@ -110,13 +110,11 @@ FLACDecoder = Decoder.extend(function() {
             
         stream.advance(8) // skip CRC check
         
+        // subframes
         this.decoded = []
         for (var i = 0; i < channels; i++) {
             this.decoded[i] = new Int32Array(this.cookie.maxBlockSize)
-        }
-        
-        // subframes
-        for (var i = 0; i < channels; i++) {
+
             if (this.decodeSubframe(i) < 0) {
                 return this.emit('error', 'Error decoding subframe ' + i)
             }
