@@ -1,3 +1,23 @@
+/*
+ * FLAC.js - Free Lossless Audio Codec decoder in JavaScript
+ * Original C version from FFmpeg (c) 2003 Alex Beregszaszi
+ * JavaScript port by Devon Govett and Jens Nockert of Official.fm Labs
+ * 
+ * Licenced under the same terms as the original.  The original
+ * licence follows.
+ *
+ * FLAC.js is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * FLAC.js is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ */
+
 FLACDecoder = Decoder.extend(function() {
     Decoder.register('flac', this)
     
