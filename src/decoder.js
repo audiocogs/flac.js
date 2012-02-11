@@ -124,12 +124,8 @@ FLACDecoder = Decoder.extend(function() {
         stream.advance(16) // skip CRC frame footer
         
         var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8),
+            buf = this.is32 ? new Int32Array(output) : new Int16Array(output),
             j = 0
-        
-        if (this.is32)
-            var buf = new Int32Array(output)
-        else
-            var buf = new Int16Array(output)
             
         switch (this.chMode) {
             case CHMODE_INDEPENDENT:
