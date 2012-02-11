@@ -3,8 +3,8 @@
  * Original C version from FFmpeg (c) 2003 Alex Beregszaszi
  * JavaScript port by Devon Govett and Jens Nockert of Official.fm Labs
  * 
- * Licenced under the same terms as the original.  The original
- * licence follows.
+ * Licensed under the same terms as the original.  The original
+ * license follows.
  *
  * FLAC.js is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
