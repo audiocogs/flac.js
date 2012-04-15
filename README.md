@@ -1,0 +1,50 @@
+flac.js: A FLAC decoder in JavaScript
+=====================================
+
+The Free Lossless Audio Codec (FLAC) is a widely used lossless audio codec, which means that the audio is compressed 
+without any loss of quality.  A decoded FLAC stream is bit-for-bit identical to the original uncompressed audio file.
+
+The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) and the demuxer is based on the original
+[FLAC documentation](http://flac.sourceforge.net/format.html).
+
+## Demo
+
+You can check out a [demo](http://labs.official.fn/codecs/flac.js/) alongside our other decoders 
+[jsmad](http://github.com/nddrylliog/jsmad)(MP3), and [alac.js](http://github.com/ofmlabs/alac.js).  Currently flac.js
+works properly in the latest versions of Firefox and Chrome, as well as Safari 5.2 beta.
+
+## Authors
+
+flac.js was written by [@jensnockert](http://github.com/jensnockert) and [@devongovett](http://github.com/devongovett) 
+of [ofmlabs](http://ofmlabs.org/).
+
+## How to run the development server
+
+If flac.js isn't already on a web server, you can start a simple Rack server:
+
+    thin -R static.ru start
+    
+Currently, the [import](https://github.com/devongovett/import) module is used to build flac.js.  You can run
+the development server by first installing `import` with npm, and then running it like this:
+
+    sudo npm install import
+    import Aurora/aurora.coffee
+    
+You can also build a static version like this:
+
+    import Aurora/aurora.coffee flac.js
+    
+## License
+
+flac.js is licensed under the same terms as the original FLAC decoder in FFMpeg. The original
+license follows.
+
+    FLAC.js is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    FLAC.js is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
