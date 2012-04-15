@@ -15,10 +15,10 @@
  */
 
 FLACDemuxer = Demuxer.extend(function() {
-    Demuxer.register(this)
+    Demuxer.register(this);
     
     this.probe = function(buffer) {
-        return buffer.peekString(0, 4) === 'fLaC'
+        return buffer.peekString(0, 4) === 'fLaC';
     }
     
     const STREAMINFO = 0,
@@ -29,90 +29,90 @@ FLACDemuxer = Demuxer.extend(function() {
           CUESHEET = 5,
           PICTURE = 6,
           INVALID = 127,
-          STREAMINFO_SIZE = 34
+          STREAMINFO_SIZE = 34;
     
     this.prototype.readChunk = function() {
-        var stream = this.stream
+        var stream = this.stream;
         
         if (!this.readHeader && stream.available(4)) {
             if (stream.readString(4) !== 'fLaC')
-                return this.emit('error', 'Invalid FLAC file.')
+                return this.emit('error', 'Invalid FLAC file.');
                 
-            this.readHeader = true
+            this.readHeader = true;
         }
         
         while (stream.available(1) && !this.last) {                     
             if (!this.readBlockHeaders) {
-                var tmp = stream.readUInt8()   
+                var tmp = stream.readUInt8();
                 this.last = (tmp & 0x80) === 0x80,
                 this.type = tmp & 0x7F,
-                this.size = stream.readUInt24()
+                this.size = stream.readUInt24();
             }
             
             if (!this.foundStreamInfo && this.type !== STREAMINFO)
-                return this.emit('error', 'STREAMINFO must be the first block')
+                return this.emit('error', 'STREAMINFO must be the first block');
                 
             if (!stream.available(this.size))
-                return
+                return;
             
             switch (this.type) {
                 case STREAMINFO:
                     if (this.foundStreamInfo)
-                        return this.emit('error', 'STREAMINFO can only occur once.')
+                        return this.emit('error', 'STREAMINFO can only occur once.');
                     
                     if (this.size !== STREAMINFO_SIZE)
-                        return this.emit('error', 'STREAMINFO size is wrong.')
+                        return this.emit('error', 'STREAMINFO size is wrong.');
                     
-                    this.foundStreamInfo = true
-                    var bitstream = new Bitstream(stream)
+                    this.foundStreamInfo = true;
+                    var bitstream = new Bitstream(stream);
                 
                     var cookie = {
                         minBlockSize: bitstream.read(16),
                         maxBlockSize: bitstream.read(16),
                         minFrameSize: bitstream.read(24),
                         maxFrameSize: bitstream.read(24)
-                    }
+                    };
                 
                     this.format = {
                         formatID: 'flac',
                         sampleRate: bitstream.read(20),
                         channelsPerFrame: bitstream.readSmall(3) + 1,
                         bitsPerChannel: bitstream.readSmall(5) + 1
-                    }
+                    };
                 
-                    this.emit('format', this.format)
-                    this.emit('cookie', cookie)
+                    this.emit('format', this.format);
+                    this.emit('cookie', cookie);
                 
-                    var sampleCount = bitstream.readBig(36)
-                    this.emit('duration', sampleCount / this.format.sampleRate * 1000 | 0)
+                    var sampleCount = bitstream.readBig(36);
+                    this.emit('duration', sampleCount / this.format.sampleRate * 1000 | 0);
                 
-                    stream.advance(16) // skip MD5 hashes
-                    this.readBlockHeaders = false
-                    break
+                    stream.advance(16); // skip MD5 hashes
+                    this.readBlockHeaders = false;
+                    break;
                     
                 case VORBIS_COMMENT:
                     // see http://www.xiph.org/vorbis/doc/v-comment.html
-                    this.metadata || (this.metadata = {})
-                    var len = stream.readUInt32(true)
+                    this.metadata || (this.metadata = {});
+                    var len = stream.readUInt32(true);
                     
-                    this.metadata.vendor = stream.readString(len)
-                    var length = stream.readUInt32(true)
+                    this.metadata.vendor = stream.readString(len);
+                    var length = stream.readUInt32(true);
                     
                     for (var i = 0; i < length; i++) {
-                        len = stream.readUInt32(true)
+                        len = stream.readUInt32(true);
                         var str = stream.readUTF8(len),
-                            idx = str.indexOf('=')
+                            idx = str.indexOf('=');
                             
-                        this.metadata[str.slice(0, idx)] = str.slice(idx + 1)
+                        this.metadata[str.slice(0, idx)] = str.slice(idx + 1);
                     }
                     
                     // TODO: standardize field names across formats
-                    break
+                    break;
                     
                 case PICTURE:
-                    var type = stream.readUInt32()
+                    var type = stream.readUInt32();
                     if (type !== 3) { // make sure this is album art (type 3)
-                        stream.advance(this.size - 4)
+                        stream.advance(this.size - 4);
                     } else {
                         var mimeLen = stream.readUInt32(),
                             mime = stream.readString(mimeLen),
@@ -123,28 +123,28 @@ FLACDemuxer = Demuxer.extend(function() {
                             depth = stream.readUInt32(),
                             colors = stream.readUInt32(),
                             length = stream.readUInt32(),
-                            picture = stream.readBuffer(length)
+                            picture = stream.readBuffer(length);
                     
-                        this.metadata || (this.metadata = {})
-                        this.metadata['Cover Art'] = picture.data.buffer
+                        this.metadata || (this.metadata = {});
+                        this.metadata['Cover Art'] = picture.data.buffer;
                     }
                     
                     // does anyone want the rest of the info?
-                    break
+                    break;
                 
                 default:
-                    stream.advance(this.size)
-                    this.readBlockHeaders = false
+                    stream.advance(this.size);
+                    this.readBlockHeaders = false;
             }
             
             if (this.last && this.metadata)
-                this.emit('metadata', this.metadata)
+                this.emit('metadata', this.metadata);
         }
         
         while (stream.available(1) && this.last) {
-            var buffer = stream.readSingleBuffer(stream.remainingBytes())
-            this.emit('data', buffer, stream.remainingBytes() === 0)
+            var buffer = stream.readSingleBuffer(stream.remainingBytes());
+            this.emit('data', buffer, stream.remainingBytes() === 0);
         }
     }
     
-})
+});
