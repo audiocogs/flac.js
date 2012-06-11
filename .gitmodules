@@ -1,0 +1,3 @@
+[submodule "vendor/alac.js"]
+	path = vendor/alac.js
+	url = https://github.com/ofmlabs/alac.js.git
