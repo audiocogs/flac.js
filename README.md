@@ -10,7 +10,7 @@ The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) 
 ## Demo
 
 You can check out a [demo](http://labs.official.fm/codecs/flac.js/) alongside our other decoders 
-[jsmad](http://github.com/nddrylliog/jsmad)(MP3), and [alac.js](http://github.com/ofmlabs/alac.js).  Currently flac.js
+[jsmad](http://github.com/ofmlabs/jsmad) (MP3), and [alac.js](http://github.com/ofmlabs/alac.js).  Currently flac.js
 works properly in the latest versions of Firefox and Chrome, as well as Safari 5.2 beta.
 
 ## Authors
@@ -18,21 +18,19 @@ works properly in the latest versions of Firefox and Chrome, as well as Safari 5
 flac.js was written by [@jensnockert](http://github.com/jensnockert) and [@devongovett](http://github.com/devongovett) 
 of [ofmlabs](http://ofmlabs.org/).
 
-## How to run the development server
-
-If flac.js isn't already on a web server, you can start a simple Rack server:
-
-    thin -R static.ru start
+## Building
     
 Currently, the [import](https://github.com/devongovett/import) module is used to build flac.js.  You can run
 the development server by first installing `import` with npm, and then running it like this:
 
     sudo npm install import
-    import Aurora/aurora.coffee
+    import flac.js -p 3030
     
 You can also build a static version like this:
 
-    import Aurora/aurora.coffee flac.js
+    import flac.js build.js
+    
+Once it is running on port 3030, you can open test.html and select a flac file from your system to play back.
     
 ## License
 
