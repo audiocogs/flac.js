@@ -29,7 +29,7 @@ FLACDecoder = Decoder.extend(function() {
         for (var i = 0; i < this.format.channelsPerFrame; i++) {
             this.decoded[i] = new Int32Array(cookie.maxBlockSize);
         }
-    }
+    };
     
     const BLOCK_SIZES = new Int16Array([
                0,      192, 576 << 0, 576 << 1, 576 << 2, 576 << 3,        0,        0,
@@ -72,11 +72,13 @@ FLACDecoder = Decoder.extend(function() {
         
         // channels
         this.chMode = chMode;
+        var channels;
+        
         if (chMode < MAX_CHANNELS) {
-            var channels = chMode + 1;
+            channels = chMode + 1;
             this.chMode = CHMODE_INDEPENDENT;
         } else if (chMode <= CHMODE_MID_SIDE) {
-            var channels = 2;
+            channels = 2;
         } else {
             return this.emit('error', 'Invalid channel mode');
         }
@@ -91,13 +93,14 @@ FLACDecoder = Decoder.extend(function() {
         this.bps = SAMPLE_SIZES[bpsCode];
         if (this.bps !== this.format.bitsPerChannel)
             return this.emit('error', 'Switching bits per sample mid-stream not supported.');
-            
+        
+        var sampleShift, is32;    
         if (this.bps > 16) {
-            this.sampleShift = 32 - this.bps;
-            this.is32 = true;
+            sampleShift = 32 - this.bps;
+            is32 = true;
         } else {
-            this.sampleShift = 16 - this.bps;
-            this.is32 = false;
+            sampleShift = 16 - this.bps;
+            is32 = false;
         }
         
         // sample number or frame number
@@ -123,14 +126,15 @@ FLACDecoder = Decoder.extend(function() {
             this.blockSize = BLOCK_SIZES[bsCode];
             
         // sample rate
+        var sampleRate;
         if (srCode < 12)
-            var sampleRate = SAMPLE_RATES[srCode];
+            sampleRate = SAMPLE_RATES[srCode];
         else if (srCode === 12)
-            var sampleRate = stream.read(8) * 1000;
+            sampleRate = stream.read(8) * 1000;
         else if (srCode === 13)
-            var sampleRate = stream.read(16);
+            sampleRate = stream.read(16);
         else if (srCode === 14)
-            var sampleRate = stream.read(16) * 10;
+            sampleRate = stream.read(16) * 10;
         else
             return this.emit('error', 'Invalid sample rate code');
             
@@ -146,56 +150,60 @@ FLACDecoder = Decoder.extend(function() {
         stream.advance(16); // skip CRC frame footer
         
         var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8),
-            buf = this.is32 ? new Int32Array(output) : new Int16Array(output),
+            buf = is32 ? new Int32Array(output) : new Int16Array(output),
+            blockSize = this.blockSize,
+            decoded = this.decoded,
             j = 0;
             
         switch (this.chMode) {
             case CHMODE_INDEPENDENT:
-                for (var k = 0; k < this.blockSize; k++) {
+                for (var k = 0; k < blockSize; k++) {
                     for (var i = 0; i < channels; i++) {
-                        buf[j++] = this.decoded[i][k] << this.sampleShift;
+                        buf[j++] = decoded[i][k] << sampleShift;
                     }
                 }
                 break;
                 
             case CHMODE_LEFT_SIDE:
-                for (var i = 0; i < this.blockSize; i++) {
-                    var left = this.decoded[0][i],
-                        right = this.decoded[1][i];
+                for (var i = 0; i < blockSize; i++) {
+                    var left = decoded[0][i],
+                        right = decoded[1][i];
 
-                    buf[j++] = left << this.sampleShift;
-                    buf[j++] = (left - right) << this.sampleShift;
+                    buf[j++] = left << sampleShift;
+                    buf[j++] = (left - right) << sampleShift;
                 }
                 break;
                 
             case CHMODE_RIGHT_SIDE:
-                for (var i = 0; i < this.blockSize; i++) {
-                    var left = this.decoded[0][i],
-                        right = this.decoded[1][i];
+                for (var i = 0; i < blockSize; i++) {
+                    var left = decoded[0][i],
+                        right = decoded[1][i];
 
-                    buf[j++] = (left + right) << this.sampleShift;
-                    buf[j++] = right << this.sampleShift;
+                    buf[j++] = (left + right) << sampleShift;
+                    buf[j++] = right << sampleShift;
                 }
                 break;
                 
             case CHMODE_MID_SIDE:
-                for (var i = 0; i < this.blockSize; i++) {
-                    var left = this.decoded[0][i],
-                        right = this.decoded[1][i];
+                for (var i = 0; i < blockSize; i++) {
+                    var left = decoded[0][i],
+                        right = decoded[1][i];
                     
                     left -= right >> 1;
-                    buf[j++] = (left + right) << this.sampleShift;
-                    buf[j++] = left << this.sampleShift;
+                    buf[j++] = (left + right) << sampleShift;
+                    buf[j++] = left << sampleShift;
                 }
                 break;
         }
         
         this.emit('data', buf);
-    }
+    };
     
     this.prototype.decodeSubframe = function(channel) {
         var wasted = 0,
-            stream = this.bitstream;
+            stream = this.bitstream,
+            blockSize = this.blockSize,
+            decoded = this.decoded;
         
         this.curr_bps = this.bps;
         if (channel === 0) {
@@ -228,12 +236,13 @@ FLACDecoder = Decoder.extend(function() {
         
         if (type === 0) {
             var tmp = stream.readSigned(this.curr_bps);
-            for (var i = 0; i < this.blockSize; i++)
-                this.decoded[channel][i] = tmp;
+            for (var i = 0; i < blockSize; i++)
+                decoded[channel][i] = tmp;
                 
         } else if (type === 1) {
-            for (var i = 0; i < this.blockSize; i++)
-                this.decoded[channel][i] = stream.readSigned(this.curr_bps);
+            var bps = this.curr_bps;
+            for (var i = 0; i < blockSize; i++)
+                decoded[channel][i] = stream.readSigned(bps);
                 
         } else if ((type >= 8) && (type <= 12)) {
             if (this.decode_subframe_fixed(channel, type & ~0x8) < 0)
@@ -249,20 +258,21 @@ FLACDecoder = Decoder.extend(function() {
         }
         
         if (wasted) {
-            for (var i = 0; i < this.blockSize; i++)
-                this.decoded[channel][i] <<= wasted;
+            for (var i = 0; i < blockSize; i++)
+                decoded[channel][i] <<= wasted;
         }
 
         return 0;
-    }
+    };
     
     this.prototype.decode_subframe_fixed = function(channel, predictor_order) {
         var decoded = this.decoded[channel],
-            stream = this.bitstream;
+            stream = this.bitstream,
+            bps = this.curr_bps;
     
         // warm up samples
         for (var i = 0; i < predictor_order; i++)
-            decoded[i] = stream.readSigned(this.curr_bps);
+            decoded[i] = stream.readSigned(bps);
     
         if (this.decode_residuals(channel, predictor_order) < 0)
             return -1;
@@ -289,8 +299,10 @@ FLACDecoder = Decoder.extend(function() {
             case 2:
             case 3:
             case 4:
-                var abcd = new Int32Array([a, b, c, d]);
-                for (var i = predictor_order; i < this.blockSize; i++) {
+                var abcd = new Int32Array([a, b, c, d]),
+                    blockSize = this.blockSize;
+                    
+                for (var i = predictor_order; i < blockSize; i++) {
                     abcd[predictor_order - 1] += decoded[i];
                     
                     for (var j = predictor_order - 2; j >= 0; j--) {
@@ -308,15 +320,17 @@ FLACDecoder = Decoder.extend(function() {
         }
          
         return 0;
-    }
+    };
     
     this.prototype.decode_subframe_lpc = function(channel, predictor_order) {
         var stream = this.bitstream,
-            decoded = this.decoded[channel];
+            decoded = this.decoded[channel],
+            bps = this.curr_bps,
+            blockSize = this.blockSize;
             
         // warm up samples
         for (var i = 0; i < predictor_order; i++) {
-            decoded[i] = stream.readSigned(this.curr_bps);
+            decoded[i] = stream.readSigned(bps);
         }
 
         var coeff_prec = stream.readSmall(4) + 1;
@@ -345,12 +359,12 @@ FLACDecoder = Decoder.extend(function() {
             return -1;
         }
             
-        for (var i = predictor_order; i < this.blockSize - 1; i += 2) {
+        for (var i = predictor_order; i < blockSize - 1; i += 2) {
             var d = decoded[i - predictor_order],
-                s0 = 0, s1 = 0;
+                s0 = 0, s1 = 0, c;
 
             for (var j = predictor_order - 1; j > 0; j--) {
-                var c = coeffs[j];
+                c = coeffs[j];
                 s0 += c * d;
                 d = decoded[i - j];
                 s1 += c * d;
@@ -363,7 +377,7 @@ FLACDecoder = Decoder.extend(function() {
             decoded[i + 1] += (s1 >> qlevel);
         }
 
-        if (i < this.blockSize) {
+        if (i < blockSize) {
             var sum = 0;
             for (var j = 0; j < predictor_order; j++)
                 sum += coeffs[j] * decoded[i - j - 1];
@@ -372,7 +386,7 @@ FLACDecoder = Decoder.extend(function() {
         }
 
         return 0;
-    }
+    };
     
     const INT_MAX = 32767;
     
@@ -393,7 +407,8 @@ FLACDecoder = Decoder.extend(function() {
             return -1;
         }
         
-        var sample = predictor_order, 
+        var decoded = this.decoded[channel],
+            sample = predictor_order, 
             i = predictor_order;
         
         for (var partition = 0; partition < (1 << rice_order); partition++) {
@@ -402,18 +417,18 @@ FLACDecoder = Decoder.extend(function() {
             if (tmp === (method_type === 0 ? 15 : 31)) {
                 tmp = stream.readSmall(5);
                 for (; i < samples; i++)
-                    this.decoded[channel][sample++] = stream.readSigned(tmp);
+                    decoded[sample++] = stream.readSigned(tmp);
                     
             } else {
                 for (; i < samples; i++)
-                    this.decoded[channel][sample++] = this.golomb(tmp, INT_MAX, 0);
+                    decoded[sample++] = this.golomb(tmp, INT_MAX, 0);
             }
             
             i = 0;
         }
         
         return 0;
-    }
+    };
     
     const MIN_CACHE_BITS = 25;
     
@@ -454,7 +469,7 @@ FLACDecoder = Decoder.extend(function() {
         }
         
         return (v >> 1) ^ -(v & 1);
-    }
+    };
     
     // Should be in the damned standard library...
     function clz(input) {
@@ -501,5 +516,4 @@ FLACDecoder = Decoder.extend(function() {
         // shouldn't get here
         return output + 4;
     }
-        
 });
