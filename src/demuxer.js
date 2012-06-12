@@ -126,7 +126,7 @@ FLACDemuxer = Demuxer.extend(function() {
                             picture = stream.readBuffer(length);
                     
                         this.metadata || (this.metadata = {});
-                        this.metadata['Cover Art'] = picture.data.buffer;
+                        this.metadata['Cover Art'] = picture;
                     }
                     
                     // does anyone want the rest of the info?
