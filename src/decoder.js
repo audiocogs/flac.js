@@ -23,6 +23,12 @@ FLACDecoder = Decoder.extend(function() {
     
     this.prototype.setCookie = function(cookie) {
         this.cookie = cookie;
+        
+        // initialize arrays
+        this.decoded = [];
+        for (var i = 0; i < this.format.channelsPerFrame; i++) {
+            this.decoded[i] = new Int32Array(cookie.maxBlockSize);
+        }
     }
     
     const BLOCK_SIZES = new Int16Array([
@@ -131,10 +137,7 @@ FLACDecoder = Decoder.extend(function() {
         stream.advance(8); // skip CRC check
         
         // subframes
-        this.decoded = [];
         for (var i = 0; i < channels; i++) {
-            this.decoded[i] = new Int32Array(this.cookie.maxBlockSize);
-
             if (this.decodeSubframe(i) < 0)
                 return this.emit('error', 'Error decoding subframe ' + i);
         }
@@ -412,8 +415,44 @@ FLACDecoder = Decoder.extend(function() {
         return 0;
     }
     
+    const MIN_CACHE_BITS = 25;
+    
     this.prototype.golomb = function(k, limit, esc_len) {
-        var v = get_ur_golomb_jpegls(this.bitstream, k, limit, esc_len);
+        var data = this.bitstream,
+            offset = data.bitPosition,
+            buf = data.peekBig(32 - offset) << offset,
+            v = 0;
+        
+        var log = 31 - clz(buf | 1); // log2(buf)
+
+        if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
+            buf >>>= log - k;
+            buf += (30 - log) << k;
+
+            data.advance(32 + k - log);
+            v = buf;
+            
+        } else {
+            for (var i = 0; data.read(1) === 0; i++)
+                buf = data.peekBig(32 - offset) << offset;
+
+            if (i < limit - 1) {
+                if (k)
+                    buf = data.read(k);
+                else
+                    buf = 0;
+
+                v = buf + (i << k);
+                
+            } else if (i === limit - 1) {
+                buf = data.read(esc_len);
+                v = buf + 1;
+                
+            } else {
+                v = -1;
+            }
+        }
+        
         return (v >> 1) ^ -(v & 1);
     }
     
@@ -462,47 +501,5 @@ FLACDecoder = Decoder.extend(function() {
         // shouldn't get here
         return output + 4;
     }
-
-    // Another function that should be in the standard library...
-    function log2(value) {
-        return 31 - clz(value | 1);
-    }
-    
-    const MIN_CACHE_BITS = 25;
-
-    function get_ur_golomb_jpegls(data, k, limit, esc_len) {
-        var offset = data.bitPosition,
-            buf = data.peekBig(32 - offset) << offset;
         
-        var log = log2(buf);
-
-        if (log - k >= 32 - MIN_CACHE_BITS && 32 - log < limit) {
-            buf >>>= log - k;
-            buf += (30 - log) << k;
-
-            data.advance(32 + k - log);
-            return buf;
-            
-        } else {
-            for (var i = 0; data.read(1) === 0; i++)
-                buf = data.peekBig(32 - offset) << offset;
-
-            if (i < limit - 1) {
-                if (k)
-                    buf = data.read(k);
-                else
-                    buf = 0;
-
-                return buf + (i << k);
-                
-            } else if (i === limit - 1) {
-                buf = data.read(esc_len);
-                return buf + 1;
-                
-            } else {
-                return -1;
-            }
-        }
-    }
-    
 });
