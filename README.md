@@ -5,13 +5,14 @@ The Free Lossless Audio Codec (FLAC) is a widely used lossless audio codec, whic
 without any loss of quality.  A decoded FLAC stream is bit-for-bit identical to the original uncompressed audio file.
 
 The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) and the demuxer is based on the original
-[FLAC documentation](http://flac.sourceforge.net/format.html).
+[FLAC documentation](http://flac.sourceforge.net/format.html).  flac.js uses the 
+[Aurora](https://github.com/ofmlabs/alac.js/tree/master/Aurora) audio framework by ofmlabs to facilitate decoding and playback.
 
 ## Demo
 
 You can check out a [demo](http://labs.official.fm/codecs/flac.js/) alongside our other decoders 
 [jsmad](http://github.com/ofmlabs/jsmad) (MP3), and [alac.js](http://github.com/ofmlabs/alac.js).  Currently flac.js
-works properly in the latest versions of Firefox and Chrome, as well as Safari 5.2 beta.
+works properly in the latest versions of Firefox and Chrome, as well as Safari 6 beta.
 
 ## Authors
 
