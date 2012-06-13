@@ -6,7 +6,7 @@ without any loss of quality.  A decoded FLAC stream is bit-for-bit identical to 
 
 The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) and the demuxer is based on the original
 [FLAC documentation](http://flac.sourceforge.net/format.html).  flac.js uses the 
-[Aurora](https://github.com/ofmlabs/alac.js/tree/master/Aurora) audio framework by ofmlabs to facilitate decoding and playback.
+[Aurora](https://github.com/ofmlabs/aurora.js) audio framework by ofmlabs to facilitate decoding and playback.
 
 ## Demo
 
