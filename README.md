@@ -24,7 +24,7 @@ of [ofmlabs](http://ofmlabs.org/).
 Currently, the [import](https://github.com/devongovett/import) module is used to build flac.js.  You can run
 the development server by first installing `import` with npm, and then running it like this:
 
-    sudo npm install import
+    sudo npm install import -g
     import flac.js -p 3030
     
 You can also build a static version like this:
