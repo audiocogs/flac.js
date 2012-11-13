@@ -14,8 +14,8 @@
  *
  */
 
-FLACDemuxer = Demuxer.extend(function() {
-    Demuxer.register(this);
+var FLACDemuxer = AV.Demuxer.extend(function() {
+    AV.Demuxer.register(this);
     
     this.probe = function(buffer) {
         return buffer.peekString(0, 4) === 'fLaC';
@@ -64,7 +64,7 @@ FLACDemuxer = Demuxer.extend(function() {
                         return this.emit('error', 'STREAMINFO size is wrong.');
                     
                     this.foundStreamInfo = true;
-                    var bitstream = new Bitstream(stream);
+                    var bitstream = new AV.Bitstream(stream);
                 
                     var cookie = {
                         minBlockSize: bitstream.read(16),
@@ -76,14 +76,14 @@ FLACDemuxer = Demuxer.extend(function() {
                     this.format = {
                         formatID: 'flac',
                         sampleRate: bitstream.read(20),
-                        channelsPerFrame: bitstream.readSmall(3) + 1,
-                        bitsPerChannel: bitstream.readSmall(5) + 1
+                        channelsPerFrame: bitstream.read(3) + 1,
+                        bitsPerChannel: bitstream.read(5) + 1
                     };
                 
                     this.emit('format', this.format);
                     this.emit('cookie', cookie);
                 
-                    var sampleCount = bitstream.readBig(36);
+                    var sampleCount = bitstream.read(36);
                     this.emit('duration', sampleCount / this.format.sampleRate * 1000 | 0);
                 
                     stream.advance(16); // skip MD5 hashes
@@ -100,7 +100,7 @@ FLACDemuxer = Demuxer.extend(function() {
                     
                     for (var i = 0; i < length; i++) {
                         len = stream.readUInt32(true);
-                        var str = stream.readUTF8(len),
+                        var str = stream.readString(len, 'utf8'),
                             idx = str.indexOf('=');
                             
                         this.metadata[str.slice(0, idx)] = str.slice(idx + 1);
