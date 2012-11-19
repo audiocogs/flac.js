@@ -54,13 +54,12 @@ var FLACDecoder = AV.Decoder.extend(function() {
     
     this.prototype.readChunk = function() {
         var stream = this.bitstream;
-        
-        if (!(stream.available(4096 << 6) || (this.receivedFinalBuffer && stream.available(48))))
-            return this.once('available', this.readChunk);
-                    
+        if (!stream.available(32))
+            return;
+                            
         // frame sync code
         if ((stream.read(15) & 0x7FFF) !== 0x7FFC)
-            return this.emit('error', 'Invalid sync code');
+            throw new Error('Invalid sync code');
             
         var isVarSize = stream.read(1),  // variable block size stream code
             bsCode = stream.read(4),  // block size
@@ -80,19 +79,19 @@ var FLACDecoder = AV.Decoder.extend(function() {
         } else if (chMode <= CHMODE_MID_SIDE) {
             channels = 2;
         } else {
-            return this.emit('error', 'Invalid channel mode');
+            throw new Error('Invalid channel mode');
         }
         
         if (channels !== this.format.channelsPerFrame)
-            return this.emit('error', 'Switching channel layout mid-stream not supported.');
+            throw new Error('Switching channel layout mid-stream not supported.');
         
         // bits per sample    
         if (bpsCode === 3 || bpsCode === 7)
-            return this.emit('error', 'Invalid sample size code');
+            throw new Error('Invalid sample size code');
             
         this.bps = SAMPLE_SIZES[bpsCode];
         if (this.bps !== this.format.bitsPerChannel)
-            return this.emit('error', 'Switching bits per sample mid-stream not supported.');
+            throw new Error('Switching bits per sample mid-stream not supported.');
         
         var sampleShift, is32;    
         if (this.bps > 16) {
@@ -117,7 +116,7 @@ var FLACDecoder = AV.Decoder.extend(function() {
                 
         // block size
         if (bsCode === 0)
-            return this.emit('error', 'Reserved blocksize code');
+            throw new Error('Reserved blocksize code');
         else if (bsCode === 6)
             this.blockSize = stream.read(8) + 1;
         else if (bsCode === 7)
@@ -136,15 +135,13 @@ var FLACDecoder = AV.Decoder.extend(function() {
         else if (srCode === 14)
             sampleRate = stream.read(16) * 10;
         else
-            return this.emit('error', 'Invalid sample rate code');
+            throw new Error('Invalid sample rate code');
             
         stream.advance(8); // skip CRC check
         
         // subframes
-        for (var i = 0; i < channels; i++) {
-            if (this.decodeSubframe(i) < 0)
-                return this.emit('error', 'Error decoding subframe ' + i);
-        }
+        for (var i = 0; i < channels; i++)
+            this.decodeSubframe(i);
         
         stream.align();
         stream.advance(16); // skip CRC frame footer
@@ -196,7 +193,7 @@ var FLACDecoder = AV.Decoder.extend(function() {
                 break;
         }
         
-        this.emit('data', buf);
+        return buf;
     };
     
     this.prototype.decodeSubframe = function(channel) {
@@ -214,10 +211,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
                 this.curr_bps++;
         }
         
-        if (stream.read(1)) {
-            this.emit('error', "Invalid subframe padding");
-            return -1;
-        }
+        if (stream.read(1))
+            throw new Error("Invalid subframe padding");
         
         var type = stream.read(6);
         
@@ -229,10 +224,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
             this.curr_bps -= wasted;
         }
         
-        if (this.curr_bps > 32) {
-            this.emit('error', "decorrelated bit depth > 32 (" + this.curr_bps + ")");
-            return -1;
-        }
+        if (this.curr_bps > 32)
+            throw new Error("decorrelated bit depth > 32 (" + this.curr_bps + ")");
         
         if (type === 0) {
             var tmp = stream.read(this.curr_bps, true);
@@ -245,24 +238,19 @@ var FLACDecoder = AV.Decoder.extend(function() {
                 decoded[channel][i] = stream.read(bps, true);
                 
         } else if ((type >= 8) && (type <= 12)) {
-            if (this.decode_subframe_fixed(channel, type & ~0x8) < 0)
-                return -1;
+            this.decode_subframe_fixed(channel, type & ~0x8);
                 
         } else if (type >= 32) {
-            if (this.decode_subframe_lpc(channel, (type & ~0x20) + 1) < 0)
-                return -1;
+            this.decode_subframe_lpc(channel, (type & ~0x20) + 1);
 
         } else {
-            this.emit('error', "Invalid coding type");
-            return -1;
+            throw new Error("Invalid coding type");
         }
         
         if (wasted) {
             for (var i = 0; i < blockSize; i++)
                 decoded[channel][i] <<= wasted;
         }
-
-        return 0;
     };
     
     this.prototype.decode_subframe_fixed = function(channel, predictor_order) {
@@ -274,8 +262,7 @@ var FLACDecoder = AV.Decoder.extend(function() {
         for (var i = 0; i < predictor_order; i++)
             decoded[i] = stream.read(bps, true);
     
-        if (this.decode_residuals(channel, predictor_order) < 0)
-            return -1;
+        this.decode_residuals(channel, predictor_order);
         
         var a = 0, b = 0, c = 0, d = 0;
         
@@ -315,11 +302,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
                 break;
                 
             default:
-                this.emit('error', "Invalid Predictor Order " + predictor_order);
-                return -1;
+                throw new Error("Invalid Predictor Order " + predictor_order);
         }
-         
-        return 0;
     };
     
     this.prototype.decode_subframe_lpc = function(channel, predictor_order) {
@@ -334,30 +318,22 @@ var FLACDecoder = AV.Decoder.extend(function() {
         }
 
         var coeff_prec = stream.read(4) + 1;
-        if (coeff_prec === 16) {
-            this.emit('error', "Invalid coefficient precision");
-            return -1;
-        }
+        if (coeff_prec === 16)
+            throw new Error("Invalid coefficient precision");
         
         var qlevel = stream.read(5, true);
-        if (qlevel < 0) {
-            this.emit('error', "Negative qlevel, maybe buggy stream");
-            return -1;
-        }
+        if (qlevel < 0)
+            throw new Error("Negative qlevel, maybe buggy stream");
         
         var coeffs = new Int32Array(32);
         for (var i = 0; i < predictor_order; i++) {
             coeffs[i] = stream.read(coeff_prec, true);
         }
         
-        if (this.decode_residuals(channel, predictor_order) < 0) {
-            return -1;
-        }
+        this.decode_residuals(channel, predictor_order);
         
-        if (this.bps > 16) {
-            this.emit('error', "no 64-bit integers in JS, could probably use doubles though");
-            return -1;
-        }
+        if (this.bps > 16)
+            throw new Error("no 64-bit integers in JS, could probably use doubles though");
             
         for (var i = predictor_order; i < blockSize - 1; i += 2) {
             var d = decoded[i - predictor_order],
@@ -384,8 +360,6 @@ var FLACDecoder = AV.Decoder.extend(function() {
 
             decoded[i] += (sum >> qlevel);
         }
-
-        return 0;
     };
     
     const INT_MAX = 32767;
@@ -394,18 +368,14 @@ var FLACDecoder = AV.Decoder.extend(function() {
         var stream = this.bitstream,
             method_type = stream.read(2);
             
-        if (method_type > 1) {
-            this.emit('error', 'Illegal residual coding method ' + method_type);
-            return -1;
-        }
+        if (method_type > 1)
+            throw new Error('Illegal residual coding method ' + method_type);
         
         var rice_order = stream.read(4),
             samples = (this.blockSize >>> rice_order);
             
-        if (predictor_order > samples) {
-            this.emit('error', 'Invalid predictor order ' + predictor_order + ' > ' + samples);
-            return -1;
-        }
+        if (predictor_order > samples)
+            throw new Error('Invalid predictor order ' + predictor_order + ' > ' + samples);
         
         var decoded = this.decoded[channel],
             sample = predictor_order, 
@@ -426,8 +396,6 @@ var FLACDecoder = AV.Decoder.extend(function() {
             
             i = 0;
         }
-        
-        return 0;
     };
     
     const MIN_CACHE_BITS = 25;
