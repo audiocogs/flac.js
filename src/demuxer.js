@@ -143,7 +143,7 @@ var FLACDemuxer = AV.Demuxer.extend(function() {
         
         while (stream.available(1) && this.last) {
             var buffer = stream.readSingleBuffer(stream.remainingBytes());
-            this.emit('data', buffer, stream.remainingBytes() === 0);
+            this.emit('data', buffer);
         }
     }
     
