@@ -11,7 +11,7 @@ The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) 
 ## Demo
 
 You can check out a [demo](http://labs.official.fm/codecs/flac/) alongside our other decoders 
-[jsmad](http://github.com/ofmlabs/jsmad) (MP3), and [alac.js](http://github.com/ofmlabs/alac.js).  Currently flac.js
+[jsmad](http://github.com/audiocogs/jsmad) (MP3), and [alac.js](http://github.com/audiocogs/alac.js).  Currently flac.js
 works properly in the latest versions of Firefox and Chrome, as well as Safari 6 beta.
 
 ## Authors
