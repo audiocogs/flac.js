@@ -11,7 +11,7 @@ The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) 
 ## Demo
 
 You can check out a [demo](http://audiocogs.org/codecs/flac/) alongside our other decoders 
-[jsmad](http://github.com/audiocogs/jsmad) (MP3), and [alac.js](http://github.com/audiocogs/alac.js).  Currently flac.js
+[alac.js](http://github.com/audiocogs/alac.js), [MP3.js](http://github.com/devongovett/mp3.js), and [AAC.js](http://github.com/audiocogs/aac.js).  Currently flac.js
 works properly in the latest versions of Firefox and Chrome, as well as Safari 6 beta.
 
 ## Authors
@@ -22,7 +22,7 @@ of [Audiocogs](http://audiocogs.org/).
 ## Building
     
 Currently, the [importer](https://github.com/devongovett/importer) module is used to build flac.js.  You can run
-the development server by first installing `importer` with npm, and then running it like this:
+the development server on port `3030` by first installing `importer` with npm, and then running it like this:
 
     npm install importer -g
     importer flac.js -p 3030
@@ -30,8 +30,12 @@ the development server by first installing `importer` with npm, and then running
 You can also build a static version like this:
 
     importer flac.js build.js
-    
-Once it is running on port 3030, you can open test.html and select a flac file from your system to play back.
+
+flac.js depends on [Aurora.js](https://github.com/audiocogs/aurora.js), our audio codec framework.  You will need
+to include either a prebuilt version of Aurora.js, or start another `importer` development server for Aurora before
+flac.js will work.  You can use the [test.html](https://github.com/audiocogs/aurora.js/blob/master/src/test.html) file
+in the Aurora.js repo as an example of how to use the APIs to play back audio files.  Just include flac.js on that 
+page as well in order to add support for FLAC files.
     
 ## License
 

@@ -1,3 +1,0 @@
-[submodule "vendor/aurora.js"]
-	path = vendor/aurora.js
-	url = git://github.com/ofmlabs/aurora.js.git
