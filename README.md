@@ -6,7 +6,7 @@ without any loss of quality.  A decoded FLAC stream is bit-for-bit identical to 
 
 The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) and the demuxer is based on the original
 [FLAC documentation](http://flac.sourceforge.net/format.html).  flac.js uses the 
-[Aurora](https://github.com/ofmlabs/aurora.js) audio framework by ofmlabs to facilitate decoding and playback.
+[Aurora](https://github.com/audiocogs/aurora.js) audio framework by ofmlabs to facilitate decoding and playback.
 
 ## Demo
 
@@ -17,19 +17,19 @@ works properly in the latest versions of Firefox and Chrome, as well as Safari 6
 ## Authors
 
 flac.js was written by [@jensnockert](http://github.com/jensnockert) and [@devongovett](http://github.com/devongovett) 
-of [ofmlabs](http://ofmlabs.org/).
+of [Audiocogs](http://audiocogs.org/).
 
 ## Building
     
-Currently, the [import](https://github.com/devongovett/import) module is used to build flac.js.  You can run
-the development server by first installing `import` with npm, and then running it like this:
+Currently, the [importer](https://github.com/devongovett/importer) module is used to build flac.js.  You can run
+the development server by first installing `importer` with npm, and then running it like this:
 
-    sudo npm install import -g
-    import flac.js -p 3030
+    npm install importer -g
+    importer flac.js -p 3030
     
 You can also build a static version like this:
 
-    import flac.js build.js
+    importer flac.js build.js
     
 Once it is running on port 3030, you can open test.html and select a flac file from your system to play back.
     
