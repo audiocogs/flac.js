@@ -1,3 +1,6 @@
-//import "vendor/aurora.js/src/aurora.coffee"
+(function() {
+
 //import "src/demuxer.js"
 //import "src/decoder.js"
+
+})();
