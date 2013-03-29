@@ -12,7 +12,7 @@ The JavaScript decoder was ported from the [FFMpeg project](http://ffmpeg.org/) 
 
 You can check out a [demo](http://audiocogs.org/codecs/flac/) alongside our other decoders 
 [alac.js](http://github.com/audiocogs/alac.js), [MP3.js](http://github.com/devongovett/mp3.js), and [AAC.js](http://github.com/audiocogs/aac.js).  Currently flac.js
-works properly in the latest versions of Firefox and Chrome, as well as Safari 6 beta.
+works properly in the latest versions of Firefox, Chrome, and Safari.
 
 ## Authors
 
