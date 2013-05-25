@@ -103,7 +103,7 @@ var FLACDemuxer = AV.Demuxer.extend(function() {
                         var str = stream.readString(len, 'utf8'),
                             idx = str.indexOf('=');
                             
-                        this.metadata[str.slice(0, idx)] = str.slice(idx + 1);
+                        this.metadata[str.slice(0, idx).toLowerCase()] = str.slice(idx + 1);
                     }
                     
                     // TODO: standardize field names across formats
@@ -126,7 +126,7 @@ var FLACDemuxer = AV.Demuxer.extend(function() {
                             picture = stream.readBuffer(length);
                     
                         this.metadata || (this.metadata = {});
-                        this.metadata['Cover Art'] = picture;
+                        this.metadata.coverArt = picture;
                     }
                     
                     // does anyone want the rest of the info?
