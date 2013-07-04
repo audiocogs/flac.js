@@ -89,7 +89,40 @@ var FLACDemuxer = AV.Demuxer.extend(function() {
                     stream.advance(16); // skip MD5 hashes
                     this.readBlockHeaders = false;
                     break;
-                    
+
+                    /*
+                    I am only looking at the least significant 32 bits of sample number and offset data
+                    This is more than sufficient for the longest flac file I have (~50 mins 2-channel 16-bit 44.1k which uses about 7.5% of the UInt32 space for the largest offset)
+                    Can certainly be improved by storing sample numbers and offests as doubles, but would require additional overriding of the searchTimestamp and seek functions (possibly more?)
+                    Also the flac faq suggests it would be possible to find frame lengths and thus create seek points on the fly via decoding but I assume this would be slow
+                    I may look into these thigns though as my project progresses
+                    */
+                    case SEEKTABLE:
+                        for(var s=0; s<this.size/18; s++)
+                        {
+                            if(stream.peekUInt32(0) == 0xFFFFFFFF && stream.peekUInt32(1) == 0xFFFFFFFF)
+                            {
+                                //placeholder, ignore
+                                stream.advance(18);
+                            } else {
+                                if(stream.readUInt32() > 0)
+                                {
+                                    this.emit('error', 'Seek points with sample number >UInt32 not supported');
+                                }
+                                var samplenum = stream.readUInt32();
+                                if(stream.readUInt32() > 0)
+                                {
+                                    this.emit('error', 'Seek points with stream offset >UInt32 not supported');
+                                }
+                                var offset = stream.readUInt32();
+
+                                stream.advance(2);
+
+                                this.addSeekPoint(offset, samplenum);
+                            }
+                        }
+                        break;
+
                 case VORBIS_COMMENT:
                     // see http://www.xiph.org/vorbis/doc/v-comment.html
                     this.metadata || (this.metadata = {});
