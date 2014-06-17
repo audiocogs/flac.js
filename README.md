@@ -21,21 +21,17 @@ of [Audiocogs](http://audiocogs.org/).
 
 ## Building
     
-Currently, the [importer](https://github.com/devongovett/importer) module is used to build flac.js.  You can run
-the development server on port `3030` by first installing `importer` with npm, and then running it like this:
+We use [browserify](https://github.com/substack/node-browserify) to build flac.js.  You can download a
+prebuilt version from the Github [releases](https://github.com/audiocogs/flac.js/releases) page. 
+To build flac.js for the browser yourself, use the following commands:
 
-    npm install importer -g
-    importer flac.js -p 3030
+    npm install
+    make browser
     
-You can also build a static version like this:
+This will place a built `flac.js` file, as well as a source map in the `build/` directory.
 
-    importer flac.js build.js
-
-flac.js depends on [Aurora.js](https://github.com/audiocogs/aurora.js), our audio codec framework.  You will need
-to include either a prebuilt version of Aurora.js, or start another `importer` development server for Aurora before
-flac.js will work.  You can use the [test.html](https://github.com/audiocogs/aurora.js/blob/master/src/test.html) file
-in the Aurora.js repo as an example of how to use the APIs to play back audio files.  Just include flac.js on that 
-page as well in order to add support for FLAC files.
+flac.js depends on [Aurora.js](https://github.com/audiocogs/aurora.js), our audio codec framework.
+For detailed information on how to use Aurora.js, check out the [documentation](https://github.com/audiocogs/aurora.js/wiki).
     
 ## License
 
