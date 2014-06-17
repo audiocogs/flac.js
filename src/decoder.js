@@ -18,6 +18,8 @@
  *
  */
 
+var AV = require('av');
+
 var FLACDecoder = AV.Decoder.extend(function() {
     AV.Decoder.register('flac', this);
     
@@ -485,3 +487,5 @@ var FLACDecoder = AV.Decoder.extend(function() {
         return output + 4;
     }
 });
+
+module.exports = FLACDecoder;
