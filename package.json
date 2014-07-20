@@ -11,7 +11,8 @@
     "browserify-shim": "^3.5.0"
   },
   "browserify-shim": {
-    "av": "global:AV"
+    "av": "global:AV",
+    "ogg.js": "global:AV.OggDemuxer"
   },
   "repository": {
     "type": "git",
