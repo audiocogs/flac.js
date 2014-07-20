@@ -1,3 +1,5 @@
+var AV = require('av');
+
 // if ogg.js exists, register a plugin
 try {
   var OggDemuxer = require('ogg.js');
