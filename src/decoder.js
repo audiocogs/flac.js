@@ -31,6 +31,9 @@ var FLACDecoder = AV.Decoder.extend(function() {
         for (var i = 0; i < this.format.channelsPerFrame; i++) {
             this.decoded[i] = new Int32Array(cookie.maxBlockSize);
         }
+        
+        // for 24 bit lpc frames, this is used to simulate a 64 bit int
+        this.lpc_total = new Int32Array(2);
     };
     
     const BLOCK_SIZES = new Int16Array([
@@ -326,36 +329,100 @@ var FLACDecoder = AV.Decoder.extend(function() {
         
         this.decode_residuals(channel, predictor_order);
         
-        if (this.bps > 16)
-            throw new Error("no 64-bit integers in JS, could probably use doubles though");
+        if (this.bps <= 16) {
+            for (var i = predictor_order; i < blockSize - 1; i += 2) {
+                var c = coeffs[0],
+                    d = decoded[i - predictor_order],
+                    s0 = 0, s1 = 0;
             
-        for (var i = predictor_order; i < blockSize - 1; i += 2) {
-            var d = decoded[i - predictor_order],
-                s0 = 0, s1 = 0, c;
-
-            for (var j = predictor_order - 1; j > 0; j--) {
-                c = coeffs[j];
+                for (var j = predictor_order - 1; j > 0; j--) {
+                    c = coeffs[j];
+                    s0 += c * d;
+                    d = decoded[i - j];
+                    s1 += c * d;
+                }
+            
                 s0 += c * d;
-                d = decoded[i - j];
+                d = decoded[i] += (s0 >> qlevel);
                 s1 += c * d;
+                decoded[i + 1] += (s1 >> qlevel);
             }
+            
+            if (i < blockSize) {
+                var sum = 0;
+                for (var j = 0; j < predictor_order; j++)
+                    sum += coeffs[j] * decoded[i - j - 1];
+            
+                decoded[i] += (sum >> qlevel);
+            }
+        } else {
+            // simulate 64 bit integer using an array of two 32 bit ints
+            var total = this.lpc_total;
+            for (var i = predictor_order; i < blockSize; i++) {
+                // reset total to 0
+                total[0] = 0;
+                total[1] = 0;
 
-            c = coeffs[0];
-            s0 += c * d;
-            d = decoded[i] += (s0 >> qlevel);
-            s1 += c * d;
-            decoded[i + 1] += (s1 >> qlevel);
-        }
+                for (j = 0; j < predictor_order; j++) {
+                    // simulate `total += coeffs[j] * decoded[i - j - 1]`
+                    multiply_add(total, coeffs[j], decoded[i - j - 1]);                    
+                }
 
-        if (i < blockSize) {
-            var sum = 0;
-            for (var j = 0; j < predictor_order; j++)
-                sum += coeffs[j] * decoded[i - j - 1];
-
-            decoded[i] += (sum >> qlevel);
+                // simulate `decoded[i] += total >> qlevel`
+                // we know that qlevel < 32 since it is a 5 bit field (see above)
+                decoded[i] += (total[0] >>> qlevel) | (total[1] << (32 - qlevel));
+            }
         }
     };
     
+    const TWO_PWR_32_DBL = Math.pow(2, 32);
+        
+    // performs `total += a * b` on a simulated 64 bit int
+    // total is an Int32Array(2)
+    // a and b are JS numbers (32 bit ints)
+    function multiply_add(total, a, b) {
+        // multiply a * b (we can use normal JS multiplication for this)
+        var r = a * b;
+        var n = r < 0;
+        if (n)
+            r = -r;
+            
+        var r_low = (r % TWO_PWR_32_DBL) | 0;
+        var r_high = (r / TWO_PWR_32_DBL) | 0;
+        if (n) {
+            r_low = ~r_low + 1;
+            r_high = ~r_high;
+        }
+        
+        // add result to total
+        var a48 = total[1] >>> 16;
+        var a32 = total[1] & 0xFFFF;
+        var a16 = total[0] >>> 16;
+        var a00 = total[0] & 0xFFFF;
+
+        var b48 = r_high >>> 16;
+        var b32 = r_high & 0xFFFF;
+        var b16 = r_low >>> 16;
+        var b00 = r_low & 0xFFFF;
+
+        var c48 = 0, c32 = 0, c16 = 0, c00 = 0;
+        c00 += a00 + b00;
+        c16 += c00 >>> 16;
+        c00 &= 0xFFFF;
+        c16 += a16 + b16;
+        c32 += c16 >>> 16;
+        c16 &= 0xFFFF;
+        c32 += a32 + b32;
+        c48 += c32 >>> 16;
+        c32 &= 0xFFFF;
+        c48 += a48 + b48;
+        c48 &= 0xFFFF;
+        
+        // store result back in total
+        total[0] = (c16 << 16) | c00;
+        total[1] = (c48 << 16) | c32;
+    }
+     
     const INT_MAX = 32767;
     
     this.prototype.decode_residuals = function(channel, predictor_order) {
