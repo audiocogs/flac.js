@@ -148,7 +148,7 @@ var FLACDecoder = AV.Decoder.extend(function() {
         stream.align();
         stream.advance(16); // skip CRC frame footer
         
-        var output = new ArrayBuffer(this.blockSize * channels * this.bps / 8),
+        var output = new ArrayBuffer(this.blockSize * channels * (is32 ? 4 : 2)),
             buf = is32 ? new Int32Array(output) : new Int16Array(output),
             blockSize = this.blockSize,
             decoded = this.decoded,
