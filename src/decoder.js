@@ -95,15 +95,6 @@ var FLACDecoder = AV.Decoder.extend(function() {
         if (this.bps !== this.format.bitsPerChannel)
             throw new Error('Switching bits per sample mid-stream not supported.');
         
-        var sampleShift, is32;    
-        if (this.bps > 16) {
-            sampleShift = 32 - this.bps;
-            is32 = true;
-        } else {
-            sampleShift = 16 - this.bps;
-            is32 = false;
-        }
-        
         // sample number or frame number
         // see http://www.hydrogenaudio.org/forums/index.php?s=ea7085ffe6d57132c36e6105c0d434c9&showtopic=88390&pid=754269&st=0&#entry754269
         var ones = 0;
@@ -148,7 +139,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
         stream.align();
         stream.advance(16); // skip CRC frame footer
         
-        var output = new ArrayBuffer(this.blockSize * channels * (is32 ? 4 : 2)),
+        var is32 = this.bps > 16,
+            output = new ArrayBuffer(this.blockSize * channels * (is32 ? 4 : 2)),
             buf = is32 ? new Int32Array(output) : new Int16Array(output),
             blockSize = this.blockSize,
             decoded = this.decoded,
@@ -158,7 +150,7 @@ var FLACDecoder = AV.Decoder.extend(function() {
             case CHMODE_INDEPENDENT:
                 for (var k = 0; k < blockSize; k++) {
                     for (var i = 0; i < channels; i++) {
-                        buf[j++] = decoded[i][k] << sampleShift;
+                        buf[j++] = decoded[i][k];
                     }
                 }
                 break;
@@ -168,8 +160,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
                     var left = decoded[0][i],
                         right = decoded[1][i];
 
-                    buf[j++] = left << sampleShift;
-                    buf[j++] = (left - right) << sampleShift;
+                    buf[j++] = left;
+                    buf[j++] = (left - right);
                 }
                 break;
                 
@@ -178,8 +170,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
                     var left = decoded[0][i],
                         right = decoded[1][i];
 
-                    buf[j++] = (left + right) << sampleShift;
-                    buf[j++] = right << sampleShift;
+                    buf[j++] = (left + right);
+                    buf[j++] = right;
                 }
                 break;
                 
@@ -189,8 +181,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
                         right = decoded[1][i];
                     
                     left -= right >> 1;
-                    buf[j++] = (left + right) << sampleShift;
-                    buf[j++] = left << sampleShift;
+                    buf[j++] = (left + right);
+                    buf[j++] = left;
                 }
                 break;
         }
