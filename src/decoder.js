@@ -331,9 +331,8 @@ var FLACDecoder = AV.Decoder.extend(function() {
         
         if (this.bps <= 16) {
             for (var i = predictor_order; i < blockSize - 1; i += 2) {
-                var c = coeffs[0],
-                    d = decoded[i - predictor_order],
-                    s0 = 0, s1 = 0;
+                var d = decoded[i - predictor_order],
+                    s0 = 0, s1 = 0, c = 0;
             
                 for (var j = predictor_order - 1; j > 0; j--) {
                     c = coeffs[j];
@@ -342,6 +341,7 @@ var FLACDecoder = AV.Decoder.extend(function() {
                     s1 += c * d;
                 }
             
+                c = coeffs[0];
                 s0 += c * d;
                 d = decoded[i] += (s0 >> qlevel);
                 s1 += c * d;
