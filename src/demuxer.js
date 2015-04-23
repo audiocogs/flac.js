@@ -54,8 +54,12 @@ var FLACDemuxer = AV.Demuxer.extend(function() {
             if (!this.foundStreamInfo && this.type !== STREAMINFO)
                 return this.emit('error', 'STREAMINFO must be the first block');
                 
-            if (!stream.available(this.size))
+            if (!stream.available(this.size)){
+                this.readBlockHeaders=true;
                 return;
+            } else {
+                this.readBlockHeaders=false;
+            }
             
             switch (this.type) {
                 case STREAMINFO:
