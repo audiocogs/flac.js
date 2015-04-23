@@ -44,7 +44,7 @@ var FLACDemuxer = AV.Demuxer.extend(function() {
         }
         
         while (stream.available(1) && !this.last) {                     
-            if (!this.readBlockHeaders && !this.waitingForStreamData) {
+            if (!this.readBlockHeaders) {
                 var tmp = stream.readUInt8();
                 this.last = (tmp & 0x80) === 0x80,
                 this.type = tmp & 0x7F,
@@ -55,10 +55,10 @@ var FLACDemuxer = AV.Demuxer.extend(function() {
                 return this.emit('error', 'STREAMINFO must be the first block');
                 
             if (!stream.available(this.size)){
-                this.waitingForStreamData=true;
+                this.readBlockHeaders=true;
                 return;
             } else {
-                this.waitingForStreamData=false;
+                this.readBlockHeaders=false;
             }
             
             switch (this.type) {
