@@ -10,7 +10,7 @@ try {
 
 if (OggDemuxer) {
   OggDemuxer.plugins.push({
-    magic: "\177FLAC",
+    magic: '177FLAC',
 
     init: function() {
       this.list = new AV.BufferList();
